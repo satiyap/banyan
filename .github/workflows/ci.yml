@@ -42,3 +42,22 @@ jobs:
         with:
           name: test-results
           path: test-results
+
+  # The Banyan server is a Go program that runs on Linux, so it is tested there:
+  # keys, the register's revisions, members' reports, and a desk syncing with it.
+  server:
+    runs-on: ubuntu-latest
+    env:
+      CGO_ENABLED: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Vet
+        run: go vet ./cmd/banyan-server ./internal/server
+      - name: Test
+        run: go test ./internal/server/
+      - name: Build
+        run: go build -trimpath -o /tmp/banyan-server ./cmd/banyan-server
+

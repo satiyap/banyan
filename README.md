@@ -46,8 +46,9 @@ A development build (its version ends in `-dev`) keeps its register in `~/Librar
 | `internal/render`, `internal/webpdf` | Cheque and report PDFs through WebKit, at an exact page size. |
 | `internal/printing` | Print queues and `lp`. |
 | `internal/db`, `internal/desksync`, `internal/connection` | The register, and its copy on a Banyan server. |
+| `cmd/banyan-server`, `internal/server` | The Banyan server: keys, the register's copies, members' reports. |
 
-The TypeScript below is the Electron app that 2.0 replaces and the Banyan server, which is still TypeScript. The rest of this README describes them.
+The TypeScript below is the Electron app that 2.0 replaces, and the server it was built with. The container now runs the Go server; `src/backend` is kept as the reference it was ported from, and both read and write the same data folder.
 
 ## Run it
 
@@ -134,7 +135,7 @@ That last case is how a register moves to a new Mac: install, connect with a new
 
 ## The Banyan server
 
-`src/backend` is a small Node server with three jobs:
+`cmd/banyan-server` is a small Go server (`internal/server`) with three jobs:
 
 0. **Discovery.** `GET /api/v1/info` is open to anyone and says only that this is a Banyan server, its name, its API version and what it can do. Nothing about the register.
 1. **Keys.** `POST /admin/keys` (with the admin token) issues a single-use key, `write` or `read`, valid for a week. Whoever redeems it gets a long-lived token.
@@ -144,8 +145,8 @@ That last case is how a register moves to a new Mac: install, connect with a new
 Run it locally:
 
 ```sh
-pnpm build:backend
-BANYAN_ADMIN_TOKEN=$(openssl rand -hex 32) BANYAN_INSECURE_COOKIES=1 pnpm backend     # http://127.0.0.1:8322
+BANYAN_ADMIN_TOKEN=$(openssl rand -hex 32) BANYAN_INSECURE_COOKIES=1 go run ./cmd/banyan-server     # http://127.0.0.1:8322
+go test ./internal/server/
 ```
 
 Issue a key (there is no admin page yet):

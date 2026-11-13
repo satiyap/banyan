@@ -1,32 +1,32 @@
 # The Banyan server: takes the register from the treasurer's desk and shows
 # members the reports. The desktop app is not built here.
+#
+# One static Go program with the report pages built in, on an empty image:
+# no shell, no package manager, no interpreter.
 
-FROM node:24-bookworm-slim AS build
+FROM golang:1.26-bookworm AS build
 WORKDIR /src
-RUN corepack enable
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-# Only what the server build needs is fetched: no Electron binary is downloaded.
-RUN pnpm install --frozen-lockfile --ignore-scripts
-COPY tsconfig.json vite.backend.config.ts ./
-COPY src ./src
-RUN pnpm build:backend
-
-FROM node:24-bookworm-slim
-ENV NODE_ENV=production \
-    PORT=8322 \
-    DATA_DIR=/data \
-    BANYAN_ASSETS=/app
-WORKDIR /app
-COPY --from=build /src/out/backend ./out/backend
-# The report pages are the desk's own frontend files, read as ordinary files.
+COPY go.mod go.sum ./
+COPY assets.go cheque-calibration.json ./
 COPY static ./static
 COPY templates ./templates
-COPY cheque-calibration.json package.json ./
-# A fixed, unprivileged user. The data volume must be writable by 1000.
-RUN mkdir -p /data && chown 1000:1000 /data
+COPY internal ./internal
+COPY cmd/banyan-server ./cmd/banyan-server
+# Only the modules the server uses are fetched; the desktop app's are not.
+RUN CGO_ENABLED=0 GOFLAGS=-mod=mod go build -trimpath -ldflags="-w -s" -o /out/banyan-server ./cmd/banyan-server
+# The data volume must be writable by the fixed user below.
+RUN mkdir -p /out/data
+
+FROM scratch
+ENV PORT=8322 \
+    DATA_DIR=/data \
+    TMPDIR=/data/tmp
+COPY --from=build /out/banyan-server /banyan-server
+COPY --from=build --chown=1000:1000 /out/data /data
+# A fixed, unprivileged user.
 USER 1000:1000
 VOLUME /data
 EXPOSE 8322
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
-  CMD node -e "fetch('http://127.0.0.1:'+process.env.PORT+'/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"
-CMD ["node", "out/backend/index.mjs"]
+  CMD ["/banyan-server", "healthcheck"]
+ENTRYPOINT ["/banyan-server"]

@@ -18,7 +18,9 @@ async function startBackend(): Promise<{ url: string; key: (role: 'write' | 'rea
       probe.close(() => resolve(port))
     })
   })
-  const child: ChildProcess = spawn(process.execPath, ['out/backend/index.mjs'], {
+  // BANYAN_SERVER_BIN runs the same test against the Go server's binary.
+  const bin = process.env.BANYAN_SERVER_BIN
+  const child: ChildProcess = spawn(bin || process.execPath, bin ? [] : ['out/backend/index.mjs'], {
     env: {
       ...process.env,
       PORT: String(port),
