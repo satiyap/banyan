@@ -1,8 +1,6 @@
-<p align="center">
-  <img src="build/icon.png" width="112" alt="">
-</p>
-
-<h1 align="center">Banyan — Cheque Desk</h1>
+<h1 align="center">
+  <img src="build/icon.png" width="56" align="absmiddle" alt="">&nbsp;Banyan — Cheque Desk
+</h1>
 
 <p align="center">
   The treasurer's desktop app for Banyan: writes, prints and logs cheques from one Mac,<br>

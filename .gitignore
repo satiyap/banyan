@@ -22,4 +22,3 @@ build/cheques/
 # desk, which the tests open to prove the file format has not changed. Fictitious data only.
 !tests/golden/register-empty.db
 !tests/golden/register-sample.db
-dist-signed
