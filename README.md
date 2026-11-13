@@ -25,6 +25,30 @@ So the app is split in two, and this repository holds both halves:
 - **Register** — an auditable record of every leaf the desk has committed, by cheque book.
 - **Reports** — the financial year by expense head, quarter and entity; month-by-head totals as a PDF; CSV exports.
 
+## The 2.0 desktop app
+
+From 2.0 the desktop app is written in Go on [Wails 3](https://wails.io) and draws its pages with the web view macOS already has, so the download is about 7 MB where the Electron build was about 120 MB. It serves the same pages (`static/`, `templates/`) and answers the same recorded sessions in `tests/golden/`, reads the same register file, and prints through the same `lp` options. Cheques are rendered to PDF by WebKit, not Chromium.
+
+You need macOS on Apple silicon, Go 1.26 and the Xcode command line tools.
+
+```sh
+sh scripts/build-mac.sh        # a development build at dist/Banyan.app
+go test ./...                  # the Go desk against the recorded answers
+```
+
+A development build (its version ends in `-dev`) keeps its register in `~/Library/Application Support/Banyan Dev` and **cannot print**. `sh scripts/release-mac.sh 2.0.0` builds the signed, notarized `dist/Banyan-mac-arm64.dmg`; it needs a Developer ID identity and a notarytool profile, named at the top of the script, and publishes nothing.
+
+| Path | What it holds |
+| --- | --- |
+| `cmd/banyan` | The app: window, menus, title bar, saving downloads. |
+| `cmd/deskdev` | The desk alone on a loopback port, for development. It never prints. |
+| `internal/desk` | The desk's `/api`, ported from `src/server`. |
+| `internal/render`, `internal/webpdf` | Cheque and report PDFs through WebKit, at an exact page size. |
+| `internal/printing` | Print queues and `lp`. |
+| `internal/db`, `internal/desksync`, `internal/connection` | The register, and its copy on a Banyan server. |
+
+The TypeScript below is the Electron app that 2.0 replaces and the Banyan server, which is still TypeScript. The rest of this README describes them.
+
 ## Run it
 
 You need macOS on Apple silicon, Node 22 or newer, and pnpm 11.

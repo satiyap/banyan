@@ -1,4 +1,4 @@
-/* Banyan Cheque Desk — shared core.
+/* Banyan — shared core.
  *
  * Plain scripts, no build step: each file adds one place to the page and
  * shares this file's helpers. User-supplied text is only ever set with
@@ -217,6 +217,7 @@ const ICONS = {
   edit: 'M4 20h4L19 9l-4-4L4 16z',
   doc: 'M6 3h9l4 4v14H6zM14 3v5h5',
   undo: 'M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3',
+  refresh: 'M20 11a8 8 0 0 0-14.5-4.5L4 8M4 3.5V8h4.5M4 13a8 8 0 0 0 14.5 4.5L20 16M20 20.5V16h-4.5',
 };
 function icon(name, cls) {
   const ns = 'http://www.w3.org/2000/svg';
@@ -382,6 +383,19 @@ async function loadHealth() {
   emit('health');
 }
 
+/* Asked for by hand: the chip says it is looking until the answer is in. */
+async function recheckPrinter() {
+  const btn = $('#printerRefresh');
+  if (btn.disabled) return;
+  btn.disabled = true;
+  btn.classList.add('busy');
+  $('#printerDot').className = 'dot';
+  $('#printerText').textContent = 'checking…';
+  await loadHealth();
+  btn.classList.remove('busy');
+  btn.disabled = false;
+}
+
 /* The calibration is re-read whenever it changes, so every leaf on the page
    re-lays itself — ink and inputs together — without a reload. */
 async function loadCalibration() {
@@ -447,7 +461,7 @@ function route() {
     if (onIt) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
   });
   $('#placeTitle').textContent = Places[place].title;
-  document.title = `${Places[place].title} · Cheque Desk`;
+  document.title = `${Places[place].title} · Banyan`;
   const content = $('#content');
   // Redrawing the place already on screen keeps the reader where they were;
   // only arriving somewhere starts at the top.

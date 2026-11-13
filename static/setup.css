@@ -5,7 +5,6 @@
 
 /* ---------------------------------------------- Settings, inside the app */
 .settings-bar { display: flex; align-items: center; justify-content: space-between; }
-.settings .rail-mark img { width: 30px; height: 30px; }
 .settings-col { max-width: 46rem; }
 .settings .panel { padding-bottom: var(--space-2xs); }
 .settings .tag { white-space: nowrap; }

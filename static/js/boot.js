@@ -17,6 +17,7 @@ async function boot() {
   State.printer = stored('banyan.printer', '');
   $('#openCommand').addEventListener('click', openPalette);
   $('#printerChip').addEventListener('click', openHealth);
+  $('#printerRefresh').addEventListener('click', recheckPrinter);
   $('#railPrinter').addEventListener('click', openHealth);
 
   State.photo = await imageExists('/static/leaf-photo.jpg');
@@ -42,7 +43,7 @@ async function boot() {
     loadCalibration();
     loadDesk();
   }, 30000);
-  window.addEventListener('focus', () => { loadCalibration(); loadDesk(); });
+  window.addEventListener('focus', () => { loadHealth(); loadCalibration(); loadDesk(); });
 }
 
 boot();

@@ -8,7 +8,7 @@
  * waive 80: the Year ring is a labelled chart, not an illustration
  * answered: amber "due soon" moved to ochre so it never reads as the orange action; red, green and purple stay as state colours, the app needs them */
 
-/* Banyan Cheque Desk, in Studio.
+/* Banyan, in Studio.
  *
  * A proof sheet: cool paper, blue-black ink, one orange that fills the single
  * action on a screen and draws construction lines around the leaf. Colour
@@ -102,8 +102,15 @@ h1, h2, h3 { max-width: none; }
 .command:hover { border-color: var(--ink-3); }
 .command-text { flex: 1; text-align: left; }
 .command kbd, kbd { font: 500 12px var(--data); padding: var(--space-3xs) 6px; border-radius: 2px; border: 1px solid currentColor; }
-.printer-chip { justify-self: end; white-space: nowrap; display: flex; align-items: center; gap: var(--space-xs); height: 32px; padding: 0 var(--space-sm); border-radius: var(--r); border: 1px solid var(--rule); background: var(--panel); cursor: pointer; font-size: 13px; }
+.printer-group { justify-self: end; display: flex; align-items: center; gap: var(--space-2xs); }
+.printer-chip { white-space: nowrap; display: flex; align-items: center; gap: var(--space-xs); height: 32px; padding: 0 var(--space-sm); border-radius: var(--r); border: 1px solid var(--rule); background: var(--panel); cursor: pointer; font-size: 13px; }
 .printer-chip:hover { border-color: var(--ink-3); }
+.printer-refresh { width: 32px; height: 32px; display: grid; place-items: center; border-radius: var(--r); border: 1px solid var(--rule); background: var(--panel); color: var(--ink-2); cursor: pointer; }
+.printer-refresh:hover { border-color: var(--ink-3); color: var(--ink); }
+.printer-refresh:disabled { cursor: default; color: var(--ink-3); }
+.printer-refresh.busy .svg-ico { animation: printer-looking 0.9s linear infinite; }
+@keyframes printer-looking { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .printer-refresh.busy .svg-ico { animation: none; } }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); }
 .dot.ok { background: var(--green); }
 .dot.bad { background: var(--stamp); }
@@ -927,6 +934,7 @@ textarea.paste { font-family: var(--data); font-size: 13px; margin-top: 10px; fo
   .tab { padding: 12px 14px; }
   .btn-link, .link-btn { min-height: 44px; display: inline-flex; align-items: center; padding: 0 var(--space-2xs); }
   .printer-chip { min-height: 40px; }
+  .printer-refresh { width: 40px; height: 40px; }
   .trail-fold > summary, .cx-fold > summary { min-height: 44px; }
   input:not([type=checkbox]):not([type=radio]), select, textarea { font-size: 16px; }
   input:not([type=checkbox]):not([type=radio]), select { min-height: 44px; }

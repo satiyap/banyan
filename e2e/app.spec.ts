@@ -96,7 +96,7 @@ test('connects to the server, renders a test sheet at the exact page size, visit
   // A real key connects, the desk opens, and the register has gone to the server.
   await window.locator('#userKey').fill(await backend.key('write'))
   await window.locator('#btnSave').click()
-  await expect(window).toHaveTitle(/Cheque Desk/)
+  await expect(window).toHaveTitle(/Desk · Banyan/)
   const saved = JSON.parse(readFileSync(join(userData, 'connection.json'), 'utf8'))
   expect(saved).toMatchObject({ status: 'connected', api_url: backend.url })
   expect(saved.token).toMatch(/^[0-9a-f]{64}$/)
@@ -105,7 +105,7 @@ test('connects to the server, renders a test sheet at the exact page size, visit
   expect(await syncNow()).toMatchObject({ connected: true, revision: 1, error: '', choice: null })
 
   // The desk's own page, served by the local server.
-  await expect(window).toHaveTitle(/Cheque Desk/)
+  await expect(window).toHaveTitle(/Desk · Banyan/)
   await expect(window.locator('#placeTitle')).toHaveText('Desk')
 
   // The app's own Chromium does the rendering, and an empty register is in the test folder.
@@ -289,7 +289,7 @@ test('a desk can skip the server connection, and is not asked again', async () =
   // Second launch: straight to the desk.
   app = await launch()
   window = await app.firstWindow({ timeout: 120_000 })
-  await expect(window).toHaveTitle(/Cheque Desk/)
+  await expect(window).toHaveTitle(/Desk · Banyan/)
 
   // The screen is still reachable, and going back changes nothing.
   await window.goto(new URL('/setup', window.url()).href)

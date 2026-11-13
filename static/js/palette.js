@@ -174,7 +174,7 @@ async function openHealth() {
     body: h('div',
       hh.printing.printers.length ? field('Print to', sel) : h('p.form-error', 'No printer found.'),
       dl([
-        ['Renderer', hh.renderer.ok ? 'Chrome ready' : hh.renderer.path, hh.renderer.ok ? '' : 'bad'],
+        ['Renderer', hh.renderer.ok ? 'Ready' : hh.renderer.path, hh.renderer.ok ? '' : 'bad'],
         ['Print system', hh.printing.cups ? 'CUPS ready' : 'CUPS unavailable', hh.printing.cups ? '' : 'bad'],
         ['Calibration', `${hh.calibration.source} v${hh.calibration.version}`, hh.calibration.error ? 'bad' : ''],
         hh.calibration.error ? ['Calibration error', hh.calibration.error, 'bad'] : null,

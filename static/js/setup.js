@@ -242,5 +242,13 @@
     );
   });
 
+  // The desktop app says which version it is. Anywhere else there is nobody to ask, and the panel stays away.
+  fetch('/shell/about').then((res) => (res.ok ? res.json() : null)).then((about) => {
+    if (!about || !about.version) return;
+    el('appVersion').textContent = `Banyan ${about.version}`;
+    el('appBuild').textContent = about.note || '';
+    el('about').hidden = false;
+  }).catch(() => {});
+
   call('GET', '/api/connection').then(show).catch((e) => { document.body.dataset.mode = 'first'; el('first').hidden = false; fail(e.message); });
 })();

@@ -82,7 +82,7 @@ function createWindow(): BrowserWindow {
     minWidth: 1024,
     minHeight: 640,
     show: false,
-    title: 'Cheque Desk',
+    title: 'Banyan',
     webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false }
   })
   window.once('ready-to-show', () => window.show())
@@ -96,7 +96,7 @@ function createWindow(): BrowserWindow {
   // Anything else goes to the browser.
   const own = (url: string) => url.startsWith(server!.url)
   window.webContents.setWindowOpenHandler(({ url }) => {
-    if (own(url)) return { action: 'allow', overrideBrowserWindowOptions: { width: 900, height: 1000, title: 'Cheque Desk' } }
+    if (own(url)) return { action: 'allow', overrideBrowserWindowOptions: { width: 900, height: 1000, title: 'Banyan' } }
     if (url.startsWith('https://')) void shell.openExternal(url)
     return { action: 'deny' }
   })
