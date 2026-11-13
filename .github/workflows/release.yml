@@ -1,0 +1,111 @@
+# A release of the desktop app: `pnpm release 0.2.0` sets the version, tags
+# v0.2.0 and pushes; this builds Banyan for Mac (Apple silicon) and publishes
+# one GitHub release holding Banyan-mac-arm64.dmg, only once the build and its
+# checks have worked. The download link never changes:
+#   releases/latest/download/Banyan-mac-arm64.dmg
+#
+# Running it by hand (Actions → Release → Run workflow) only builds: the disk
+# image is attached to the run and nothing is published.
+#
+# Nothing but a tag starts it, so docs and ordinary pushes never make a release.
+#
+# Signing. With the five secrets below set, the app is signed with a Developer
+# ID and notarized, and opens on any Mac. Without them the release is still
+# built, ad-hoc signed, and says so in its notes: on another Mac it is blocked
+# the first time and must be allowed in System Settings ▸ Privacy & Security.
+#   MAC_CERT_P12_BASE64, MAC_CERT_PASSWORD, APPLE_ID,
+#   APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-latest
+    outputs:
+      signed: ${{ steps.package.outputs.signed }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: The tag matches the app's version
+        if: github.event_name == 'push' && github.ref_type == 'tag'
+        run: test "v$(node -p "require('./package.json').version")" = "${{ github.ref_name }}"
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Test
+        run: pnpm test
+      - name: Build
+        run: pnpm build
+      - name: Package
+        id: package
+        env:
+          CSC_LINK: ${{ secrets.MAC_CERT_P12_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -n "$CSC_LINK" ] && [ -n "$APPLE_ID" ]; then
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+            pnpm exec electron-builder --mac --publish never -c.mac.notarize=true
+          else
+            echo "::warning::No signing certificate in this repository: the release is ad-hoc signed"
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            export CSC_IDENTITY_AUTO_DISCOVERY=false; unset CSC_LINK CSC_KEY_PASSWORD
+            pnpm exec electron-builder --mac --publish never -c.mac.identity=- -c.mac.hardenedRuntime=false
+          fi
+      # The packaged app itself, on a throwaway data folder, against a local server. It never prints.
+      - name: Check the app
+        run: |
+          pnpm build:backend
+          APP_EXECUTABLE=dist/mac-arm64/Banyan.app/Contents/MacOS/Banyan pnpm exec playwright test
+          if [ "${{ steps.package.outputs.signed }}" = true ]; then codesign --verify --deep --strict dist/mac-arm64/Banyan.app; fi
+      # The app inside is notarized by electron-builder; the disk image is checked when downloaded too.
+      - name: Notarize the disk image
+        if: steps.package.outputs.signed == 'true'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcrun notarytool submit dist/Banyan-mac-arm64.dmg --apple-id "$APPLE_ID" --password "$APPLE_APP_SPECIFIC_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
+          xcrun stapler staple dist/Banyan-mac-arm64.dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: banyan-mac
+          path: dist/Banyan-mac-arm64.dmg
+          if-no-files-found: error
+
+  # Only a pushed tag publishes, and only once the build worked; a run by hand never does.
+  publish:
+    needs: build
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: files
+          merge-multiple: true
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SIGNED: ${{ needs.build.outputs.signed }}
+        run: |
+          ls -la files
+          note=""
+          if [ "$SIGNED" != true ]; then
+            note="This build is not signed with an Apple Developer ID. macOS blocks it the first time: open it once, then go to System Settings ▸ Privacy & Security and choose Open Anyway."
+          fi
+          gh release create "${{ github.ref_name }}" files/* --repo "${{ github.repository }}" \
+            --title "Banyan ${GITHUB_REF_NAME#v}" --generate-notes --notes "$note" --latest

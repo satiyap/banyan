@@ -1,0 +1,44 @@
+# Every push and pull request: typecheck, the unit tests (the desk against its
+# recorded answers, the Banyan server, desk-to-server sync), then the real app
+# against a real local server. Nothing here prints: the app refuses to in tests.
+name: CI
+
+# Docs, licence text and the other workflows do not run it. A newer push to
+# the same branch stops the run before it: macOS minutes cost ten times Linux ones.
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['docs/**', '**/*.md', 'LICENSE', '.github/workflows/image.yml', '.github/workflows/release.yml']
+  pull_request:
+    paths-ignore: ['docs/**', '**/*.md', 'LICENSE', '.github/workflows/image.yml', '.github/workflows/release.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Unit tests
+        run: pnpm test
+      - name: The app, end to end
+        run: pnpm e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-results
+          path: test-results

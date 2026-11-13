@@ -1,0 +1,6 @@
+# Which dependencies may run install scripts. Electron needs none:
+# it downloads its binary the first time it runs.
+allowBuilds:
+  esbuild: true
+  electron-winstaller: false
+  electron: false

@@ -1,0 +1,23 @@
+{
+  "_comment": "Physical calibration for the SBI multi-city leaf (204 x 92 mm, landscape). All field positions are millimetres from the leaf's top-left corner, before the 90-degree print rotation. Bump 'version' after changing any value: a version change makes every browser drop its saved per-field overrides and pick these up.",
+  "_hardware": "The HP LaserJet Pro MFP M126nw PPD declares an ImageableArea inset of 11.9906pt = 4.23mm on all four edges. Nothing closer than ~4.3mm to any leaf edge will receive toner, so keep every field at or beyond 5mm from the edges. The A/C payee crossing is a deliberate exception: it is anchored inside that margin and its ends are accepted as clipped, since the two rules and the caption still fall in the printable middle.",
+  "version": 15,
+  "leaf": { "w": 204, "h": 92 },
+  "dx": 0,
+  "dy": 0,
+  "flip": false,
+  "_paper": "'exact' prints a custom 92x204mm page. 'a4' prints the same 92x204 block at 1:1 on an A4 sheet, offset by a4x/a4y millimetres from the sheet's top-left, for printers with no custom size.",
+  "paper": "exact",
+  "a4x": 0,
+  "a4y": 0,
+  "fields": {
+    "date":   { "x": 154.0, "y": 6.0,  "pitch": 5.5, "size": 3.6 },
+    "payee":  { "x": 18.0,  "y": 19.8, "w": 143,     "size": 3.3 },
+    "words1": { "x": 33.0,  "y": 28.3, "w": 169,     "size": 3.3 },
+    "words2": { "x": 9.0,   "y": 35.0, "w": 139,     "size": 3.3 },
+    "amount": { "x": 156.0, "y": 34.0,               "size": 3.9 },
+    "_cross": "Bounding box for the A/C payee crossing. x,y = top-left corner in mm. w,h = box size; the box's top and bottom borders ARE the two rules, so h is the gap between them. angle = tilt in degrees (negative tilts up to the right). origin = pivot corner, 'top left' or 'bottom left'. textDx = caption nudge in mm, negative moves it left. size = caption text height, tracking = letter spacing.",
+    "cross":  { "x": 0.0,   "y": 19.5, "w": 28, "h": 3.4, "angle": -45, "origin": "top left", "textDx": 0, "size": 1.5, "tracking": 0.15 },
+    "bearer": { "x": 179.0, "y": 20.8, "w": 20 }
+  }
+}

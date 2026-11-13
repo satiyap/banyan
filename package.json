@@ -1,0 +1,40 @@
+{
+  "name": "banyan",
+  "productName": "Banyan",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "Banyan cheque desk: writes, prints and logs cheques from the treasurer's Mac.",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "server": "node out/main/server.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "e2e": "electron-vite build && vite build --config vite.backend.config.ts && playwright test",
+    "icons": "electron scripts/make-icons.cjs",
+    "render-check": "electron scripts/render-check.cjs",
+    "verify-print": "vitest run --config vitest.verify.config.mts",
+    "package": "electron-vite build && electron-builder --mac --publish never -c.mac.identity=- -c.mac.hardenedRuntime=false",
+    "package:dir": "electron-vite build && electron-builder --mac --dir --publish never -c.mac.identity=- -c.mac.hardenedRuntime=false",
+    "build:backend": "vite build --config vite.backend.config.ts",
+    "backend": "node out/backend/index.mjs",
+    "release": "sh scripts/release.sh"
+  },
+  "devDependencies": {
+    "@hono/node-server": "^2.1.6",
+    "@playwright/test": "^1.65.0",
+    "@types/node": "^26.6.6",
+    "electron": "^45.3.0",
+    "electron-builder": "^26.18.0",
+    "electron-vite": "^6.0.0",
+    "hono": "^4.13.17",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0",
+    "zod": "^4.6.7"
+  },
+  "packageManager": "pnpm@11.3.0"
+}

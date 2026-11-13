@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in · Banyan reports</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/tokens.css">
+<link rel="stylesheet" href="/static/base.css">
+<link rel="stylesheet" href="/static/desk.css">
+<link rel="stylesheet" href="/static/setup.css">
+</head>
+<body class="settings">
+
+<main class="first">
+  <div class="first-sheet">
+    <div class="first-head">
+      <img class="first-mark" src="/static/favicon.svg" alt="">
+      <h1>Banyan reports</h1>
+    </div>
+    <p class="first-lead">Enter the key you were given to see where the association’s money went, by year and by month.</p>
+
+    <form method="post" action="/login">
+      <div class="field">
+        <label for="key">Key</label>
+        <input type="text" id="key" name="key" autocomplete="off" autocapitalize="characters" spellcheck="false" required autofocus aria-describedby="loginError">
+      </div>
+      <div class="btn-row">
+        <button type="submit" class="btn btn-primary">Sign in</button>
+      </div>
+    </form>
+
+    <p class="note-line settings-error" id="loginError" role="alert" hidden></p>
+    <p class="first-note">A key works once. After that this browser stays signed in. On another phone or computer, ask the treasurer for another key.</p>
+  </div>
+</main>
+
+<script src="/static/js/login.js"></script>
+</body>
+</html>

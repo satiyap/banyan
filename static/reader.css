@@ -1,0 +1,9 @@
+/* The members' report pages: the desk's Year and Monthly, with nothing that writes or prints. */
+.reader .rail-mark img { width: 30px; height: 30px; }
+.reader .topbar { gap: var(--space-md); }
+.reader-asof { margin-left: auto; color: var(--ink-3); font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
+/* The PDF is drawn by the desk's own browser engine, which the server does not carry. */
+.reader a[href^="/api/reports/monthly.pdf"] { display: none; }
+/* Rows that open a cheque on the desk lead nowhere here. */
+.reader a.lrow { pointer-events: none; }
+.reader .topbar { display: flex; align-items: center; }

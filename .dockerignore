@@ -1,0 +1,22 @@
+.git
+.github
+node_modules
+out
+dist
+build
+e2e
+tests
+scripts
+test-results
+playwright-report
+.DS_Store
+*.md
+# The register is on the pod's volume; the image must never carry one.
+data/
+*.db
+*.db-wal
+*.db-shm
+# Cheque-leaf photographs. The server never serves the preview backdrop.
+*.HEIC
+*.heic
+static/leaf-photo.jpg

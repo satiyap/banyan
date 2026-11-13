@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Settings · Banyan</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/tokens.css">
+<link rel="stylesheet" href="/static/base.css">
+<link rel="stylesheet" href="/static/desk.css">
+<link rel="stylesheet" href="/static/setup.css">
+</head>
+<body class="settings" data-mode="loading">
+
+<!-- Settings, once the app has been set up: inside the app's own rail and top bar. -->
+<div class="shell" id="app" hidden>
+  <nav class="rail" id="rail" aria-label="Places">
+    <a class="rail-mark" href="/" aria-label="Banyan"><img src="/static/favicon.svg" alt=""></a>
+    <span class="rail-push"></span>
+  </nav>
+
+  <div class="main">
+    <header class="topbar settings-bar">
+      <h1 class="place" id="placeTitle">Settings</h1>
+      <a class="btn btn-quiet btn-sm" id="btnBack" href="/">Back to the desk</a>
+    </header>
+
+    <div class="content" id="content" tabindex="-1">
+      <div class="settings-col">
+
+        <section class="panel" aria-labelledby="serverHead">
+          <div class="panel-head">
+            <h2 id="serverHead">Banyan server</h2>
+            <span class="tag" id="roleTag"></span>
+          </div>
+
+          <div class="set">
+            <div class="set-row" id="rowAddress">
+              <div class="set-label" id="lblAddress">Address</div>
+              <div class="set-value">
+                <div id="addrName"></div>
+                <div class="set-sub" id="addrUrl"></div>
+              </div>
+              <div class="set-actions">
+                <button type="button" class="btn btn-quiet btn-sm" id="btnChange">Change</button>
+              </div>
+              <form class="set-edit" id="formAddress" novalidate hidden>
+                <input type="text" id="setAddress" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://" aria-labelledby="lblAddress" aria-describedby="settingsError">
+                <button type="submit" class="btn btn-primary btn-sm" id="btnCheck">Find the server</button>
+                <button type="button" class="btn btn-quiet btn-sm" id="btnCancelAddress">Cancel</button>
+              </form>
+            </div>
+
+            <div class="set-row" id="rowKey">
+              <div class="set-label" id="lblKey">Key</div>
+              <div class="set-value">
+                <div id="keyState"></div>
+                <div class="set-sub" id="keySub"></div>
+              </div>
+              <div class="set-actions">
+                <button type="button" class="btn btn-quiet btn-sm" id="btnSwitch">Switch key</button>
+                <button type="button" class="btn btn-danger-quiet btn-sm" id="btnReset">Reset key</button>
+              </div>
+              <form class="set-edit" id="formKey" novalidate hidden>
+                <input type="text" id="setKey" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" aria-labelledby="lblKey" aria-describedby="settingsError">
+                <button type="submit" class="btn btn-primary btn-sm" id="btnConnect">Connect</button>
+                <button type="button" class="btn btn-quiet btn-sm" id="btnCancelKey">Cancel</button>
+              </form>
+            </div>
+
+            <div class="set-row" id="rowSync">
+              <div class="set-label">Register</div>
+              <div class="set-value">
+                <div id="syncState"></div>
+                <div class="set-sub" id="syncSub"></div>
+              </div>
+            </div>
+          </div>
+
+          <p class="note-line settings-error" id="settingsError" role="alert" hidden></p>
+        </section>
+
+        <section class="panel settings-choice" id="choice" aria-labelledby="choiceHead" hidden>
+          <div class="panel-head"><h2 id="choiceHead">Which register is the right one?</h2></div>
+          <p id="choiceText"></p>
+          <div class="btn-row">
+            <button type="button" class="btn btn-quiet" id="btnRestore">Use the server’s register</button>
+            <button type="button" class="btn btn-quiet" id="btnOverwrite">Use this desk’s register</button>
+          </div>
+          <p class="set-sub">Nothing is sent or fetched until you choose. Whichever you use replaces the other. If it is the server’s, the register on this desk now is kept beside it as a file, and the app restarts.</p>
+        </section>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- The first launch: one sheet, two steps. The address, then the key. -->
+<main class="first" id="first" hidden>
+  <div class="first-sheet">
+    <div class="first-head">
+      <img class="first-mark" src="/static/favicon.svg" alt="">
+      <h1 id="setupTitle">Connect to your Banyan server</h1>
+    </div>
+    <p class="first-lead" id="setupLead">Enter the API URL you were given.</p>
+
+    <form id="stepUrl" novalidate>
+      <div class="field">
+        <label for="apiUrl">API URL</label>
+        <input type="text" id="apiUrl" name="api_url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://" aria-describedby="setupError">
+      </div>
+      <div class="btn-row">
+        <button type="submit" class="btn btn-primary" id="btnFind">Find the server</button>
+        <button type="button" class="btn btn-quiet js-skip" id="btnSkip">Skip for now</button>
+        <span class="first-step">Step 1 of 2</span>
+      </div>
+    </form>
+
+    <form id="stepKey" novalidate hidden>
+      <p class="first-found"><span id="serverFound"></span> <button type="button" class="btn-link" id="btnBackToUrl">Change the address</button></p>
+      <div class="field">
+        <label for="userKey">User key</label>
+        <input type="text" id="userKey" name="user_key" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" aria-describedby="setupError">
+      </div>
+      <div class="btn-row">
+        <button type="submit" class="btn btn-primary" id="btnSave">Connect</button>
+        <button type="button" class="btn btn-quiet js-skip" id="btnSkipKey">Skip for now</button>
+        <span class="first-step">Step 2 of 2</span>
+      </div>
+    </form>
+
+    <p class="note-line settings-error" id="setupError" role="alert" hidden></p>
+    <p class="first-note">The desk writes and prints cheques without a server. You can connect later in Settings.</p>
+  </div>
+</main>
+
+<script src="/static/js/core.js"></script>
+<script src="/static/js/desk-extras.js"></script>
+<script src="/static/js/setup.js"></script>
+</body>
+</html>

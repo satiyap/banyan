@@ -1,0 +1,50 @@
+/* Geometry of the printed cheque. Shared verbatim by the on-screen preview and
+   the PDF sent to the printer — there is no second copy of these rules.
+
+   Everything here is in millimetres on purpose. The only pixel value in the
+   print path would be a rounding error waiting to happen. */
+
+.cheque-space {
+  position: relative;
+  overflow: hidden;          /* preview clips at the leaf edge; print overrides */
+}
+
+/* Fixed to the paper: the leaf's own edges, grid and rulers. Never nudged. */
+.cheque-paper-layer { position: absolute; left: 0; top: 0; }
+
+/* Everything that receives toner. The calibration nudge translates this group,
+   so a dx/dy correction moves every field together and nothing else. */
+.cheque-content { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+
+.pf {
+  position: absolute;
+  color: #000;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  white-space: pre;
+  line-height: 1.18;
+  font-weight: 500;
+}
+
+/* One box per date digit, centred on its cell so DDMMYYYY lands in the boxes
+   rather than being set as a single tracked-out string. */
+.pf-digit { text-align: center; font-weight: 600; }
+
+.pf-amt { font-weight: 700; letter-spacing: 0.02em; }
+
+/* The two rules of the crossing are this box's top and bottom borders, which is
+   why its height is the gap between them. */
+.pf-cross {
+  box-sizing: border-box;
+  border-top: 0.45mm solid #000;
+  border-bottom: 0.45mm solid #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: visible;
+}
+
+.pf-strike { border-top: 0.5mm solid #000; transform: rotate(5deg); }
+
+.testlayer-paper, .testlayer-fields { position: absolute; left: 0; top: 0; }

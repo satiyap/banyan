@@ -1,0 +1,25 @@
+node_modules
+out
+dist
+test-results
+playwright-report
+*.db
+*.db-shm
+*.db-wal
+.DS_Store
+
+# The register is financial data and never belongs in this repository.
+data/
+*.db-wal
+*.db-shm
+# Original photographs of a real cheque leaf. The only one kept is the
+# redacted static/leaf-photo.jpg, whose hash a test pins.
+*.HEIC
+*.heic
+# Rendered cheques and reports.
+build/cheques/
+# The exception: two invented registers written by an earlier version of the
+# desk, which the tests open to prove the file format has not changed. Fictitious data only.
+!tests/golden/register-empty.db
+!tests/golden/register-sample.db
+dist-signed

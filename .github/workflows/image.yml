@@ -1,0 +1,70 @@
+name: Build and publish the server image
+
+on:
+  push:
+    branches: [main]
+    # Only what goes into the image (see the Dockerfile's COPY lines). Docs,
+    # the README, tests and anything that only touches the desktop app's
+    # packaging are not server releases, so they build nothing and nothing is
+    # rolled out. A new COPY in the Dockerfile must be added here too.
+    paths:
+      - 'src/backend/**'
+      - 'src/server/**'
+      - 'src/shared/**'
+      - '!src/**/*.test.ts'
+      - 'static/**'
+      - 'templates/**'
+      - 'cheque-calibration.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'tsconfig.json'
+      - 'vite.backend.config.ts'
+      - 'Dockerfile'
+      - '.dockerignore'
+      - '.github/workflows/image.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    # A GitHub-hosted arm64 runner: a native build, no emulation. Never a
+    # self-hosted one: in a public repository a pull request from a fork could
+    # run its own code there.
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Sortable tag: a deployment can order releases by the timestamp and
+      # roll the newest one out.
+      - name: Compute sortable tag
+        id: tag
+        run: |
+          echo "value=main-$(date -u +%s)-$(git rev-parse --short=7 HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          # Hosted runners start empty, so the layer cache is kept in the
+          # repository's Actions cache between builds.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+          sbom: false
+          push: true
+          tags: |
+            ghcr.io/satiyap/banyan:latest
+            ghcr.io/satiyap/banyan:${{ steps.tag.outputs.value }}

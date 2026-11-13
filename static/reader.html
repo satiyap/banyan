@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Banyan reports</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/tokens.css">
+<link rel="stylesheet" href="/static/base.css">
+<link rel="stylesheet" href="/static/desk.css">
+<link rel="stylesheet" href="/static/reader.css">
+</head>
+<body class="reader">
+
+<div class="shell">
+  <nav class="rail" aria-label="Reports">
+    <a class="rail-mark" href="#/year" aria-label="Banyan reports"><img src="/static/favicon.svg" alt=""></a>
+    <a class="rail-item" href="#/year" data-place="year"><span class="ico" data-ico="year"></span><span>Year</span></a>
+    <a class="rail-item" href="#/monthly" data-place="monthly"><span class="ico" data-ico="calendar"></span><span>Monthly</span></a>
+    <span class="rail-push"></span>
+  </nav>
+
+  <div class="main">
+    <header class="topbar">
+      <h1 class="place" id="placeTitle">Year</h1>
+      <p class="reader-asof" id="asOf"></p>
+      <form method="post" action="/logout" id="signOut"><button type="submit" class="btn btn-quiet btn-sm">Sign out</button></form>
+    </header>
+    <div class="content" id="content" tabindex="-1"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="update-bar" id="updateBar" role="alert" hidden>
+  <span>These pages have been updated. Reload to carry on.</span>
+  <button type="button" class="btn btn-primary btn-sm" id="btnReload">Reload</button>
+</div>
+
+<script src="/static/js/core.js"></script>
+<!-- For its segmented control, which the report pages use. Nothing here can save: the server has no such routes. -->
+<script src="/static/js/entity-form.js"></script>
+<script src="/static/js/year.js"></script>
+<script src="/static/js/monthly.js"></script>
+<script src="/static/js/desk-extras.js"></script>
+<script src="/static/js/reader-boot.js"></script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+appId: com.banyanrwa.chequedesk
+# The app's name is "productName" in package.json. The icon is build/icon.png.
+directories:
+  output: dist
+  buildResources: build
+# No auto-update feed yet.
+publish: null
+files:
+  - out/**
+  - package.json
+# Shipped beside the app, not inside its archive, because the server reads them as ordinary files.
+extraResources:
+  - from: static
+    to: static
+  - from: templates
+    to: templates
+  - from: cheque-calibration.json
+    to: cheque-calibration.json
+mac:
+  category: public.app-category.finance
+  # The download is always called this, so a link to the latest release never changes.
+  artifactName: Banyan-mac-${arch}.${ext}
+  target:
+    - target: dmg
+      arch: arm64
+  # No signing identity is named here. `pnpm package` asks for an ad-hoc
+  # signature, which runs on the Mac that built it. A release built by
+  # .github/workflows/release.yml is signed with a Developer ID and notarized
+  # when the repository holds the certificate, and ad-hoc when it does not.
+  hardenedRuntime: true
