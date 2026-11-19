@@ -8,7 +8,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 
-VERSION="${VERSION:-2.0.0-dev}"
+VERSION="${VERSION:-2.1.0-dev}"
 OUT="dist"
 APP="$OUT/Banyan.app"
 
@@ -51,6 +51,12 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>LSMinimumSystemVersion</key><string>12.0</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.finance</string>
   <key>NSHighResolutionCapable</key><true/>
+  <key>NSLocalNetworkUsageDescription</key><string>Banyan looks for your printer on the local network so it can check that it's ready before printing a cheque.</string>
+  <key>NSBonjourServices</key>
+  <array>
+    <string>_ipp._tcp</string>
+    <string>_ipps._tcp</string>
+  </array>
 </dict>
 </plist>
 PLIST

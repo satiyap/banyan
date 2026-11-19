@@ -380,6 +380,15 @@ async function loadHealth() {
   $('#printerText').textContent = !hh ? 'server unreachable'
     : !p ? 'no printer found'
     : `${p.name.replace(/_/g, ' ').replace(/^HP LaserJet Pro MFP /, '')} · ${p.online === false ? 'offline' : 'ready'}`;
+  // No answer from the printer may be macOS refusing the local network, not the
+  // printer. Only the desktop app knows; elsewhere this asks nobody.
+  if (hh && p && p.online == null) {
+    const perm = await fetch('/shell/permissions').then(r => (r.ok ? r.json() : null)).catch(() => null);
+    if (perm && perm.local_network === 'denied') {
+      $('#printerDot').className = 'dot';
+      $('#printerText').textContent = `${p.name.replace(/_/g, ' ').replace(/^HP LaserJet Pro MFP /, '')} · can’t check, allow local network in Settings`;
+    }
+  }
   emit('health');
 }
 

@@ -250,5 +250,40 @@
     el('about').hidden = false;
   }).catch(() => {});
 
+  // Local network: only the desktop app can be asked, so elsewhere the panel stays away.
+  const NET = {
+    allowed: ['ok', 'Allowed', 'Banyan can check that the printer is switched on.'],
+    denied: ['bad', 'Not allowed', 'Banyan can’t check whether the printer is on. Printing still works. macOS won’t ask again, so turn Banyan on in System Settings, then check again.'],
+    unknown: ['', 'Not checked yet', 'Lets Banyan check that the printer is switched on. Printing works without it.']
+  };
+  function drawNet(p) {
+    const [tone, state, sub] = NET[p.local_network] || NET.unknown;
+    el('netDot').className = 'dot' + (tone ? ' ' + tone : '');
+    el('netState').textContent = p.checked_at && p.local_network === 'unknown' ? 'Couldn’t tell' : state;
+    el('netSub').textContent = p.checked_at && p.local_network === 'unknown'
+      ? 'Nothing on the network answered. Check again with the printer switched on.' : sub;
+    el('btnNetOpen').hidden = p.local_network !== 'denied';
+    el('rowLocalNet').classList.toggle('is-bad', p.local_network === 'denied');
+  }
+  function checkNet() {
+    const btn = el('btnNetCheck');
+    btn.disabled = true;
+    el('netDot').className = 'dot';
+    el('netState').textContent = 'Checking…';
+    fetch('/shell/permissions', { method: 'POST' }).then((res) => (res.ok ? res.json() : null))
+      .then((p) => { if (p) drawNet(p); })
+      .catch(() => {})
+      .finally(() => { btn.disabled = false; });
+  }
+  fetch('/shell/permissions').then((res) => (res.ok ? res.json() : null)).then((p) => {
+    if (!p || !p.local_network) return;
+    el('permissions').hidden = false;
+    drawNet(p);
+    // Checked on opening, so the row says something true, and a first-time ask is shown here.
+    checkNet();
+  }).catch(() => {});
+  el('btnNetCheck').addEventListener('click', checkNet);
+  el('btnNetOpen').addEventListener('click', () => { fetch('/shell/permissions/open', { method: 'POST' }).catch(() => {}); });
+
   call('GET', '/api/connection').then(show).catch((e) => { document.body.dataset.mode = 'first'; el('first').hidden = false; fail(e.message); });
 })();

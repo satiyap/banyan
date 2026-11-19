@@ -22,6 +22,9 @@
 .set-row .settings-error { grid-column: 2 / -1; margin: 0; }
 .set-row.is-bad #syncState { color: var(--stamp); }
 
+.perm-state { display: flex; align-items: center; gap: var(--space-xs); }
+.perm-state .dot { flex: none; }
+
 .settings-error { background: var(--stamp-w); color: var(--stamp); border-color: var(--stamp-rule); margin: var(--space-2xs) 0 var(--space-md); }
 .settings-choice p { max-width: 60ch; }
 .settings-choice .btn-row { margin: var(--space-md) 0; }

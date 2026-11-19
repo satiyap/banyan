@@ -10,6 +10,9 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
+
+	"github.com/satiyap/banyan/internal/printing"
 )
 
 // files stands between the window and the desk for what a web view cannot do
@@ -30,6 +33,36 @@ func files(desk http.Handler, p paths, pageTitle func(string)) http.Handler {
 				Version string `json:"version"`
 				Note    string `json:"note"`
 			}{version, note})
+			return
+		}
+		// Settings and the desk ask whether the app may use the local network.
+		// POST checks by trying it, which is also what makes macOS ask.
+		if r.URL.Path == "/shell/permissions" && (r.Method == http.MethodGet || r.Method == http.MethodPost) {
+			state, at := printing.LocalNetworkState()
+			if r.Method == http.MethodPost {
+				state = printing.CheckLocalNetwork()
+				_, at = printing.LocalNetworkState()
+			}
+			checked := ""
+			if !at.IsZero() {
+				checked = at.UTC().Format(time.RFC3339)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Cache-Control", "no-store")
+			_ = json.NewEncoder(w).Encode(struct {
+				LocalNetwork string `json:"local_network"`
+				CheckedAt    string `json:"checked_at"`
+			}{string(state), checked})
+			return
+		}
+		// Opens System Settings at Privacy & Security > Local Network. After a
+		// refusal macOS never asks again, so this is the only way back.
+		if r.Method == http.MethodPost && r.URL.Path == "/shell/permissions/open" {
+			if err := exec.Command("open", "x-apple.systempreferences:com.apple.preference.security?Privacy_LocalNetwork").Run(); err != nil {
+				http.Error(w, "System Settings could not be opened", http.StatusBadGateway)
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		// The page says what it is called, for the title bar.

@@ -107,15 +107,8 @@ type RunFunc func(cmd string, args []string, timeout time.Duration) (Completed, 
 // Run is how every print-system command is run. Tests replace it.
 var Run RunFunc = execRun
 
-// dial reports whether host:port accepts a TCP connection in time.
-var dial = func(address string, timeout time.Duration) bool {
-	conn, err := net.DialTimeout("tcp", address, timeout)
-	if err != nil {
-		return false
-	}
-	conn.Close()
-	return true
-}
+// dial reports whether host:port accepts a TCP connection in time. Tests replace it.
+var dial = realDial
 
 func isJSSpace(r rune) bool {
 	switch r {
@@ -161,27 +154,41 @@ func deviceUris() map[string]string {
 	return uris
 }
 
-func tcpReachable(uri string) *bool {
+// probeAddress is the host:port a device URI is reached at, or "" when it is
+// not a network device.
+func probeAddress(uri string) string {
 	parts, err := url.Parse(uri)
 	if err != nil {
-		return nil
+		return ""
 	}
 	defaultPort, ok := networkPorts[parts.Scheme]
 	host := parts.Hostname()
 	if !ok || host == "" {
-		return nil
+		return ""
 	}
 	port := defaultPort
 	if p := parts.Port(); p != "" {
 		n, err := strconv.Atoi(p)
 		if err != nil || n > 65535 {
-			return nil
+			return ""
 		}
 		if n != 0 {
 			port = n
 		}
 	}
-	answer := dial(net.JoinHostPort(host, strconv.Itoa(port)), probeTimeout)
+	return net.JoinHostPort(host, strconv.Itoa(port))
+}
+
+func tcpReachable(uri string) *bool {
+	address := probeAddress(uri)
+	if address == "" {
+		return nil
+	}
+	answer := dial(address, probeTimeout)
+	// Refused by the local-network permission: the printer may well be on.
+	if !answer && refusedByPermission(address) {
+		return nil
+	}
 	return &answer
 }
 
@@ -247,6 +254,10 @@ func DeviceOnline(uri string) *bool {
 		return nil
 	}
 	if resolved == "" {
+		// A Bonjour browse the permission blocks finds nothing either.
+		if state, _ := LocalNetworkState(); state == LocalNetworkDenied {
+			return nil
+		}
 		no := false
 		return &no
 	}

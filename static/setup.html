@@ -91,6 +91,24 @@
         </section>
 
 
+        <!-- Shown only inside the desktop app: macOS asks the app, not a browser. -->
+        <section class="panel" id="permissions" aria-labelledby="permHead" hidden>
+          <div class="panel-head"><h2 id="permHead">Permissions</h2></div>
+          <div class="set">
+            <div class="set-row" id="rowLocalNet">
+              <div class="set-label">Local network</div>
+              <div class="set-value">
+                <div class="perm-state"><span class="dot" id="netDot" aria-hidden="true"></span><span id="netState" aria-live="polite">Not checked yet</span></div>
+                <div class="set-sub" id="netSub">Lets Banyan check that the printer is switched on. Printing works without it.</div>
+              </div>
+              <div class="set-actions">
+                <button type="button" class="btn btn-quiet btn-sm" id="btnNetCheck">Check now</button>
+                <button type="button" class="btn btn-quiet btn-sm" id="btnNetOpen" hidden>Open System Settings</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <!-- Shown only inside the desktop app, which is what knows its version. -->
         <section class="panel" id="about" aria-labelledby="aboutHead" hidden>
           <div class="panel-head"><h2 id="aboutHead">This app</h2></div>
