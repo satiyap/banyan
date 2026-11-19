@@ -31,13 +31,15 @@
       <h1>Cheques written, printed and logged.</h1>
       <p class="lead">A Mac app for small organisations that leaves only the signature to do by hand.</p>
       <div class="actions">
-        <a class="btn primary crop js-dl" href="https://github.com/satiyap/banyan/releases/latest/download/Banyan-mac-arm64.dmg">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7 11 5 5 5-5"/><path d="M5 20h14"/></svg>
-          Download for Mac
-        </a>
+        <div class="get">
+          <a class="btn primary crop js-dl" href="https://github.com/satiyap/banyan/releases/latest/download/Banyan-mac-arm64.dmg">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7 11 5 5 5-5"/><path d="M5 20h14"/></svg>
+            Download for Mac
+          </a>
+          <p class="platform" id="platform" aria-live="polite">Needs a Mac with Apple silicon (M1 or later).</p>
+        </div>
         <a class="btn crop" href="https://github.com/satiyap/banyan">View the source</a>
       </div>
-      <p class="platform" id="platform" aria-live="polite">Needs a Mac with Apple silicon (M1 or later).</p>
     </div>
     <figure class="shot crop">
       <img src="assets/img/tray.webp" width="1700" height="1062" alt="The Tray screen: a cheque leaf with the payee, the amount in words and figures and the date placed inside orange guides at measured positions, beside a summary of two cheques ready to print.">
@@ -155,7 +157,10 @@
     var ua = navigator.userAgent || '';
     var uad = navigator.userAgentData;
     var mac = /Macintosh|Mac OS X/.test(ua) && !/iPhone|iPad/.test(ua) && !(navigator.maxTouchPoints > 1);
-    if (!mac) return Promise.resolve(/Windows|Linux|CrOS|Android|iPhone|iPad/.test(ua) || navigator.maxTouchPoints > 1 ? 'other' : 'unknown');
+    if (!mac) {
+      if (/iPhone|iPad|Android/.test(ua) || navigator.maxTouchPoints > 1) return Promise.resolve('mobile');
+      return Promise.resolve(/Windows|Linux|CrOS/.test(ua) ? 'other' : 'unknown');
+    }
     if (uad && uad.getHighEntropyValues) {
       return uad.getHighEntropyValues(['architecture']).then(function (v) {
         return v.architecture === 'arm' ? 'apple' : v.architecture === 'x86' ? 'intel' : 'unknown';
@@ -168,16 +173,19 @@
   }
   var note = document.getElementById('platform');
   var links = document.querySelectorAll('.js-dl');
+  var SAY = {
+    apple: 'For your Mac with Apple silicon.',
+    intel: 'Not available for Intel Macs. Banyan needs a Mac with Apple silicon (M1 or later).',
+    other: 'Not available for this computer. Banyan is a Mac app for Apple silicon (M1 or later).',
+    mobile: 'Banyan runs on a Mac with Apple silicon (M1 or later). Open this page on your Mac to download it.'
+  };
   detect().then(function (kind) {
-    if (kind === 'apple') {
-      note.textContent = 'For your Mac with Apple silicon.';
-    } else if (kind === 'intel') {
-      note.textContent = 'This Mac has an Intel chip. Banyan needs a Mac with Apple silicon (M1 or later).';
-      for (var i = 0; i < links.length; i++) links[i].classList.remove('primary');
-    } else if (kind === 'other') {
-      note.textContent = 'Banyan is a Mac app, for Macs with Apple silicon (M1 or later). The source is open to read on any computer.';
-      for (var j = 0; j < links.length; j++) links[j].hidden = true;
-    }
+    if (!SAY[kind]) return;   // cannot tell: the button stays, with the requirement under it
+    note.textContent = SAY[kind];
+    if (kind === 'apple') return;
+    // Only an Apple silicon build exists, so anything else is not offered a download.
+    for (var i = 0; i < links.length; i++) links[i].hidden = true;
+    note.classList.add('is-unsupported');
   });
 })();
 </script>
