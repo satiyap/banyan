@@ -285,6 +285,7 @@ Decisions already made by the owner. Do not reopen them without being asked:
 
 ## Editing conventions
 
+- **Keep `CHANGELOG.md` current.** Every release adds a section at the top: `## <version> — <date>`, then a few bullets of key features and user-visible fixes only, in plain words for the people who use the app. No internal refactors, test changes or commit lists. Add it in the same change that bumps the version, before the tag is pushed.
 - Make the smallest coherent change. Existing behaviour is kept, not redesigned; where the code and a recording in `tests/golden/` disagree, the recording is the reference until the owner says otherwise.
 - Keep field placement in `static/cheque-layout.js` only. If you find yourself writing a second copy of the geometry for the preview, stop — that is the bug this structure exists to prevent.
 - Keep the frontend build-free: no bundler, no framework, no CDN asset.

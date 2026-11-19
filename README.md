@@ -11,6 +11,7 @@
   <a href="https://satiyap.github.io/banyan/"><b>Website</b></a> ·
   <a href="https://github.com/satiyap/banyan/releases/latest/download/Banyan-mac-arm64.dmg"><b>Download for Mac</b></a> ·
   <a href="https://github.com/satiyap/banyan/releases">Releases</a> ·
+  <a href="CHANGELOG.md">Changelog</a> ·
   <a href="https://github.com/satiyap/banyan/issues">Issues</a>
 </p>
 
