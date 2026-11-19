@@ -362,7 +362,7 @@ func (s *Server) writer(r *http.Request) (*Session, error) {
 		return nil, err
 	}
 	if session.Role != "write" {
-		return nil, refuse(403, "Only the treasurer’s desk can do that.")
+		return nil, refuse(403, "Only the desk that writes cheques can do that.")
 	}
 	return session, nil
 }

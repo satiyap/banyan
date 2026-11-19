@@ -183,7 +183,7 @@ export function createBackend(config: BackendConfig, options: { now?: () => Date
   }
   function writer(c: Context): Session {
     const session = deskSession(c)
-    if (session.role !== 'write') throw new StoreError('Only the treasurer’s desk can do that.', 403)
+    if (session.role !== 'write') throw new StoreError('Only the desk that writes cheques can do that.', 403)
     return session
   }
 

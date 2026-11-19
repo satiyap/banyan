@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This repository is the treasurer's desktop app for Banyan: it writes, prints and logs cheques from one Mac. The primary target is a current State Bank of India multi-city cheque leaf printed on an HP LaserJet Pro MFP M126nw.
+This repository is Banyan, a desktop app for small organisations: it writes, prints and logs cheques from one Mac. The primary target is a current State Bank of India multi-city cheque leaf printed on an HP LaserJet Pro MFP M126nw.
 
 The desk began as a small web app, and this repository is now the only home of it. Its behaviour is pinned by the recordings in `tests/golden/`: the answers its rules gave on invented inputs, replayed by the tests. The rules were first written in Python, which is why some code reproduces Python's exact rounding, sorting and text handling. **Do not re-invent a capability or a screen that already exists; change it where it is.**
 

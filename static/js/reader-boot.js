@@ -23,7 +23,7 @@
       if (error) { note.textContent = error; return; }
       note.textContent = latest
         ? `Register as of ${fmtStamp(latest.synced_at)}`
-        : 'The treasurer’s desk has not sent a register yet.';
+        : 'The cheque desk has not sent a register yet.';
     } catch (e) { note.textContent = ''; }
   }
 

@@ -142,7 +142,7 @@ func (b *fakeBackend) session(w http.ResponseWriter, r *http.Request, write bool
 		return ""
 	}
 	if write && held.role != "write" {
-		b.reply(w, 403, detail{"Only the treasurer’s desk can do that."})
+		b.reply(w, 403, detail{"Only the desk that writes cheques can do that."})
 		return ""
 	}
 	return held.role

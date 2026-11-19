@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for taking a look. Banyan is a small app with one main user, a treasurer printing real cheques, so changes are judged by one question: could this put the wrong ink on a bank leaf, or lose a record?
+Thanks for taking a look. Banyan is a small app that small organisations use to print real cheques, so changes are judged by one question: could this put the wrong ink on a bank leaf, or lose a record?
 
 ## Before you start
 

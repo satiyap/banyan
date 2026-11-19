@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "private": true,
   "license": "Apache-2.0",
-  "description": "Banyan cheque desk: writes, prints and logs cheques from the treasurer's Mac.",
+  "description": "Banyan cheque desk: writes, prints and logs cheques for small organisations, from one Mac.",
   "main": "out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",

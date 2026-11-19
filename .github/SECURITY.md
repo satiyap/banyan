@@ -26,4 +26,4 @@ Only the latest release gets fixes.
 - The Banyan server: keys, tokens, sync and the members' pages
 - Anything that would let a read key write, or let a reader get the register file
 
-Out of scope: problems that need someone who already controls the treasurer's Mac or the server host.
+Out of scope: problems that need someone who already controls the Mac running the desk or the server host.
