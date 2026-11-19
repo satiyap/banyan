@@ -1,7 +1,8 @@
-# A release of the desktop app: `pnpm release 0.2.0` sets the version, tags
-# v0.2.0 and pushes; this builds Banyan for Mac (Apple silicon) and publishes
-# one GitHub release holding Banyan-mac-arm64.dmg, only once the build and its
-# checks have worked. The download link never changes:
+# A release of the desktop app: `pnpm release 2.1.0` sets the version, tags
+# v2.1.0 and pushes; this builds the Go app (cmd/banyan, Wails 3) for Mac
+# (Apple silicon) and publishes one GitHub release holding
+# Banyan-mac-arm64.dmg, only once the build and its checks have worked. The
+# download link never changes:
 #   releases/latest/download/Banyan-mac-arm64.dmg
 #
 # Running it by hand (Actions → Release → Run workflow) only builds: the disk
@@ -29,51 +30,75 @@ jobs:
   build:
     runs-on: macos-latest
     outputs:
-      signed: ${{ steps.package.outputs.signed }}
+      signed: ${{ steps.sign.outputs.signed }}
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-go@v5
         with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - name: The tag matches the app's version
-        if: github.event_name == 'push' && github.ref_type == 'tag'
-        run: test "v$(node -p "require('./package.json').version")" = "${{ github.ref_name }}"
-      - name: Typecheck
-        run: pnpm typecheck
-      - name: Test
-        run: pnpm test
-      - name: Build
-        run: pnpm build
-      - name: Package
-        id: package
-        env:
-          CSC_LINK: ${{ secrets.MAC_CERT_P12_BASE64 }}
-          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          go-version-file: go.mod
+      - name: The version
+        id: version
         run: |
-          if [ -n "$CSC_LINK" ] && [ -n "$APPLE_ID" ]; then
-            echo "signed=true" >> "$GITHUB_OUTPUT"
-            pnpm exec electron-builder --mac --publish never -c.mac.notarize=true
+          if [ "${{ github.event_name }}" = push ] && [ "${{ github.ref_type }}" = tag ]; then
+            v="${GITHUB_REF_NAME#v}"
+            # The tag and package.json say the same version, as `pnpm release` leaves them.
+            test "$v" = "$(node -p "require('./package.json').version")"
           else
+            v="$(node -p "require('./package.json').version")-dev"
+          fi
+          echo "$v" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-dev)?$'
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - name: Test
+        run: GOWORK=off go test ./...
+      # A Developer ID, when the repository holds one, goes into a keychain of its own for this run.
+      - name: Signing identity
+        id: sign
+        env:
+          CERT: ${{ secrets.MAC_CERT_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+        run: |
+          if [ -z "$CERT" ] || [ -z "$APPLE_ID" ]; then
             echo "::warning::No signing certificate in this repository: the release is ad-hoc signed"
             echo "signed=false" >> "$GITHUB_OUTPUT"
-            export CSC_IDENTITY_AUTO_DISCOVERY=false; unset CSC_LINK CSC_KEY_PASSWORD
-            pnpm exec electron-builder --mac --publish never -c.mac.identity=- -c.mac.hardenedRuntime=false
+            exit 0
           fi
-      # The packaged app itself, on a throwaway data folder, against a local server. It never prints.
-      - name: Check the app
+          kc="$RUNNER_TEMP/signing.keychain-db"
+          kcpass="$(openssl rand -hex 16)"
+          echo "$CERT" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$kcpass" "$kc"
+          security set-keychain-settings -lut 3600 "$kc"
+          security unlock-keychain -p "$kcpass" "$kc"
+          security import "$RUNNER_TEMP/cert.p12" -k "$kc" -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$kcpass" "$kc" >/dev/null
+          security list-keychains -d user -s "$kc" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/cert.p12"
+          identity="$(security find-identity -v -p codesigning "$kc" | sed -n 's/.*"\(Developer ID Application: .*\)"/\1/p' | head -1)"
+          test -n "$identity"
+          echo "identity=$identity" >> "$GITHUB_OUTPUT"
+          echo "signed=true" >> "$GITHUB_OUTPUT"
+      - name: Build
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          SIGN_IDENTITY: ${{ steps.sign.outputs.identity }}
         run: |
-          pnpm build:backend
-          APP_EXECUTABLE=dist/mac-arm64/Banyan.app/Contents/MacOS/Banyan pnpm exec playwright test
-          if [ "${{ steps.package.outputs.signed }}" = true ]; then codesign --verify --deep --strict dist/mac-arm64/Banyan.app; fi
-      # The app inside is notarized by electron-builder; the disk image is checked when downloaded too.
-      - name: Notarize the disk image
-        if: steps.package.outputs.signed == 'true'
+          sh scripts/build-mac.sh
+          codesign --verify --strict dist/Banyan.app
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' dist/Banyan.app/Contents/Info.plist)" = "$VERSION"
+      - name: Disk image
+        env:
+          SIGN_IDENTITY: ${{ steps.sign.outputs.identity }}
+        run: |
+          stage="$(mktemp -d)"
+          cp -R dist/Banyan.app "$stage/"
+          ln -s /Applications "$stage/Applications"
+          hdiutil create -quiet -volname Banyan -srcfolder "$stage" -fs HFS+ -format UDZO dist/Banyan-mac-arm64.dmg
+          if [ -n "$SIGN_IDENTITY" ]; then
+            codesign --force --timestamp --sign "$SIGN_IDENTITY" dist/Banyan-mac-arm64.dmg
+          fi
+          ls -l dist/Banyan-mac-arm64.dmg
+      - name: Notarize
+        if: steps.sign.outputs.signed == 'true'
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
@@ -81,6 +106,7 @@ jobs:
         run: |
           xcrun notarytool submit dist/Banyan-mac-arm64.dmg --apple-id "$APPLE_ID" --password "$APPLE_APP_SPECIFIC_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
           xcrun stapler staple dist/Banyan-mac-arm64.dmg
+          spctl --assess --type open --context context:primary-signature dist/Banyan-mac-arm64.dmg
       - uses: actions/upload-artifact@v4
         with:
           name: banyan-mac

@@ -73,6 +73,8 @@ strong { font-weight: 500; color: var(--color-ink); }
 .hero .container { display: grid; grid-template-columns: minmax(0, 9fr) minmax(0, 15fr); gap: var(--space-2xl); align-items: center; }
 .hero h1 { font-size: clamp(2.75rem, 4.6vw + 1rem, 5.25rem); max-width: 9ch; }
 .hero .lead { margin-top: var(--space-lg); color: var(--color-ink-2); max-width: 24ch; }
+.hero .platform { margin-top: var(--space-md); color: var(--color-ink-2); font-size: var(--text-sm); max-width: 44ch; }
+.btn[hidden] { display: none; }
 .hero .actions { margin-top: var(--space-xl); }
 
 /* Screenshots are printed pieces: a sheet, its one shadow, crop marks. */

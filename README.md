@@ -40,6 +40,8 @@ Download **[Banyan-mac-arm64.dmg](https://github.com/satiyap/banyan/releases/lat
 
 If macOS blocks the app the first time you open it, allow it under **System Settings ▸ Privacy & Security ▸ Open Anyway**. That happens when a release is built without an Apple Developer ID.
 
+The first time Banyan checks your printer, macOS asks whether it may find devices on your local network. Allow it, so Banyan can tell whether the printer is switched on. Printing works either way. **Settings ▸ Permissions** shows whether it's allowed, with a coloured dot, and opens System Settings if you need to change it.
+
 **Before you print a real cheque, print the test sheet on plain paper cut to leaf size and hold it against a real leaf.** Every printer feeds paper a little differently, and only a test print shows how yours does.
 
 ---
@@ -107,7 +109,7 @@ open dist/mac-arm64/Banyan.app
 | `pnpm server` | Runs only the desk's local server under plain Node, after `pnpm build`. |
 | `pnpm build:backend` | Builds the Banyan server into `out/backend/`. |
 | `pnpm backend` | Runs the Banyan server, after `pnpm build:backend`. |
-| `pnpm release 0.2.0` | Tags and pushes a release of the desktop app. |
+| `pnpm release 2.1.0` | Sets the version, tags and pushes a release of the desktop app. |
 
 Inside the app there are three parts:
 
@@ -228,9 +230,9 @@ A failing replay means behaviour changed. If the change is intended, update the 
 | --- | --- | --- |
 | `ci.yml` | A push to `main`, or a pull request that changes code. Changes to docs and `*.md` alone don't trigger it. | Typecheck, unit tests, the app end to end. |
 | `image.yml` | A push to `main` that changes something in the server image. | Builds `ghcr.io/satiyap/banyan` on a GitHub-hosted ARM64 runner. |
-| `release.yml` | A `v*` tag. | Builds `Banyan-mac-arm64.dmg`, tests the packaged app and publishes a GitHub release. |
+| `release.yml` | A `v*` tag. | Runs the Go tests, builds the Go app (`scripts/build-mac.sh`) into `Banyan-mac-arm64.dmg` and publishes a GitHub release. |
 
-`pnpm release 0.2.0` sets the version, tags `v0.2.0` and pushes, and the tag builds and publishes the release. The latest disk image is always at `releases/latest/download/Banyan-mac-arm64.dmg`.
+`pnpm release 2.1.0` sets the version in `package.json`, tags `v2.1.0` and pushes, and the tag builds and publishes the release. The workflow refuses a tag that doesn't match `package.json`. The latest disk image is always at `releases/latest/download/Banyan-mac-arm64.dmg`.
 
 A release is signed and notarized when the repository holds an Apple Developer ID certificate. The secrets are listed at the top of `release.yml`. Without one the release is ad-hoc signed, and macOS will ask for **Open Anyway** the first time.
 
