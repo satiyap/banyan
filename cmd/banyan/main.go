@@ -5,11 +5,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -22,6 +24,7 @@ import (
 	"github.com/satiyap/banyan/internal/connection"
 	"github.com/satiyap/banyan/internal/desk"
 	"github.com/satiyap/banyan/internal/desksync"
+	"github.com/satiyap/banyan/internal/update"
 	"github.com/satiyap/banyan/internal/webpdf"
 )
 
@@ -64,6 +67,8 @@ func main() {
 		printDisabled = os.Getenv("BANYAN_ALLOW_PRINT") != "1"
 	}
 
+	updater := newUpdater(paths)
+
 	var app *application.App
 	bar := &titleBar{}
 	var restarting, quitting atomic.Bool
@@ -93,7 +98,17 @@ func main() {
 	app = application.New(application.Options{
 		Name:        "Banyan",
 		Description: "Writes, prints and logs cheques",
-		Assets:      application.AssetOptions{Handler: trace(files(theDesk, paths, bar.setPage)), DisableLogging: true},
+		Assets: application.AssetOptions{Handler: trace(files(theDesk, paths, bar.setPage, shellUpdate{
+			updater: updater,
+			// The swap happens once this process has gone. Quitting the usual
+			// way sends the register to the server on the way out.
+			quit: func() {
+				time.AfterFunc(300*time.Millisecond, func() {
+					quitting.Store(true)
+					app.Quit()
+				})
+			},
+		})), DisableLogging: true},
 		// Closing the window leaves the app in the Dock, as version 1 did.
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: false,
@@ -152,6 +167,7 @@ func main() {
 	setupMenu(app, window, paths)
 	bar.update(func() { bar.window = window })
 	go bar.watchSync(theDesk)
+	go watchUpdates(updater, bar)
 
 	// Development: BANYAN_RENDER_CHECK=page.html:out.pdf renders one cheque-sized
 	// page with the app's own renderer and quits. Nothing is printed.
@@ -237,11 +253,12 @@ func describeSync(s desk.SyncStatus) string {
 // only when the Banyan server's copy of the register needs attention. It does
 // not follow the page.
 type titleBar struct {
-	mu     sync.Mutex
-	window *application.WebviewWindow
-	page   string
-	note   string
-	shown  string
+	mu      sync.Mutex
+	window  *application.WebviewWindow
+	page    string
+	note    string
+	release string // a release ready to install, said only while all else is well
+	shown   string
 }
 
 func (t *titleBar) update(change func()) {
@@ -250,6 +267,8 @@ func (t *titleBar) update(change func()) {
 	title := windowTitle
 	if t.note != "" {
 		title += " — " + t.note
+	} else if t.release != "" {
+		title += " — " + t.release
 	}
 	window, changed := t.window, title != t.shown
 	t.shown = title
@@ -268,6 +287,50 @@ func (t *titleBar) watchSync(d *desk.App) {
 		note := describeSync(d.Sync().Status())
 		t.update(func() { t.note = note })
 		time.Sleep(10 * time.Second)
+	}
+}
+
+// newUpdater is nil for a development build, which has no release to follow,
+// unless BANYAN_UPDATE_URL points it at a manifest to test against
+// (with BANYAN_UPDATE_KEY, the public key that manifest is signed with).
+func newUpdater(p paths) *update.Updater {
+	manifest, key := update.ManifestURL, update.PublicKey()
+	if isDev() {
+		manifest = os.Getenv("BANYAN_UPDATE_URL")
+		if manifest == "" {
+			return nil
+		}
+		if k := os.Getenv("BANYAN_UPDATE_KEY"); k != "" {
+			key = update.PublicKeyFrom(k)
+		}
+	}
+	exe, _ := os.Executable()
+	bundle := update.BundleOf(exe)
+	update.Tidy(bundle)
+	u := update.New(version, manifest, key, filepath.Join(p.data, "updates"), bundle)
+	if isDev() {
+		// A test server serves the disk image beside its manifest.
+		u.DownloadPrefix = manifest[:strings.LastIndex(manifest, "/")+1]
+	}
+	return u
+}
+
+// watchUpdates checks shortly after launch and then every six hours, and puts
+// a newer release in the title bar. Installing is always the treasurer's
+// choice, made in Settings: the app never restarts itself under a cheque.
+func watchUpdates(u *update.Updater, bar *titleBar) {
+	if u == nil {
+		return
+	}
+	time.Sleep(20 * time.Second)
+	for {
+		s := u.Check(context.Background())
+		note := ""
+		if s.Status == update.StatusAvailable || s.Status == update.StatusReady {
+			note = "Banyan " + s.Available + " is available. Banyan ▸ Settings"
+		}
+		bar.update(func() { bar.release = note })
+		time.Sleep(6 * time.Hour)
 	}
 }
 

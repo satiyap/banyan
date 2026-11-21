@@ -320,6 +320,47 @@
     el('about').hidden = false;
   }).catch(() => {});
 
+  // Updates: the desktop app checks the release page. Installing is always a
+  // click here, so the app never restarts under a cheque.
+  function drawUpdate(u) {
+    if (!u || !u.status || u.status === 'off') return;
+    el('updates').hidden = false;
+    const checked = u.checked_at ? `Checked ${new Date(u.checked_at).toLocaleString()}.` : '';
+    const [tone, state, sub] = {
+      idle: ['', 'Not checked yet', ''],
+      checking: ['', 'Checking…', ''],
+      current: ['ok', 'Up to date', checked],
+      available: ['warn', `Banyan ${u.available} is available`, 'Installing quits Banyan, puts the new version in its place and opens it. The register and calibration are kept.'],
+      downloading: ['', `Downloading Banyan ${u.available}… ${Math.round((u.progress || 0) * 100)}%`, 'The download is checked against the release’s signature before anything changes.'],
+      ready: ['ok', `Installing Banyan ${u.available}`, 'Banyan is quitting and will open again in a moment.'],
+      error: ['bad', 'Couldn’t check for updates', '']
+    }[u.status] || ['', u.status, ''];
+    el('updDot').className = 'dot' + (tone ? ' ' + tone : '');
+    el('updState').textContent = state;
+    el('updSub').textContent = u.blocked && u.status === 'available' ? u.blocked : (u.error || sub);
+    el('updNotes').hidden = !(u.notes && (u.status === 'available' || u.status === 'downloading'));
+    el('updNotes').textContent = u.notes || '';
+    el('btnUpdInstall').hidden = u.status !== 'available' || Boolean(u.blocked);
+    el('btnUpdCheck').disabled = ['checking', 'downloading', 'ready'].includes(u.status);
+    if (u.status === 'downloading' || u.status === 'ready') setTimeout(followUpdate, 500);
+  }
+  const followUpdate = () => fetch('/shell/update').then((r) => (r.ok ? r.json() : null)).then(drawUpdate).catch(() => {});
+  function checkUpdate() {
+    drawUpdate({ status: 'checking' });
+    fetch('/shell/update/check', { method: 'POST' }).then((r) => (r.ok ? r.json() : null)).then(drawUpdate).catch(() => {});
+  }
+  fetch('/shell/update').then((r) => (r.ok ? r.json() : null)).then((u) => {
+    if (!u || !u.status || u.status === 'off') return;
+    drawUpdate(u);
+    if (u.status === 'idle' || location.hash === '#updates') checkUpdate();
+    if (location.hash === '#updates') el('updates').scrollIntoView({ block: 'center' });
+  }).catch(() => {});
+  el('btnUpdCheck').addEventListener('click', checkUpdate);
+  el('btnUpdInstall').addEventListener('click', () => {
+    el('btnUpdInstall').hidden = true;
+    fetch('/shell/update/install', { method: 'POST' }).then((r) => (r.ok ? r.json() : null)).then(() => followUpdate()).catch(() => {});
+  });
+
   // Local network: only the desktop app can be asked, so elsewhere the panel stays away.
   const NET = {
     allowed: ['ok', 'Allowed', 'Banyan can check that the printer is switched on.'],

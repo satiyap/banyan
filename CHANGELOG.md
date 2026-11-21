@@ -2,6 +2,14 @@
 
 Key features in each release of the Banyan desktop app. The full history is in the git log.
 
+## 2.2.0 — 2026-11-21
+
+- **Banyan updates itself.** It checks for a new version when it opens and every six hours. When there is one, the title bar says so, and **Settings ▸ This app ▸ Updates** shows what changed with an **Install and restart** button.
+- Nothing installs until you click, so an update never interrupts a cheque. The register, calibration and server connection are kept.
+- Every update is checked against the release's signature, size and fingerprint before anything changes. If any check fails, the update isn't used and Banyan carries on as it was.
+- **Banyan ▸ Check for Updates…** checks straight away.
+- This is the last version you need to download by hand.
+
 ## 2.1.1 — 2026-11-21
 
 - Keys now say what they are for: `W-` makes this Mac the cheque desk, `R-` shows reports only. A key offered for the wrong role is refused without being used up.

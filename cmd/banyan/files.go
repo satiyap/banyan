@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"mime"
 	"net/http"
@@ -13,13 +14,20 @@ import (
 	"time"
 
 	"github.com/satiyap/banyan/internal/printing"
+	"github.com/satiyap/banyan/internal/update"
 )
+
+// shellUpdate is what Settings needs to check for and install a new release.
+type shellUpdate struct {
+	updater *update.Updater // nil in a development build
+	quit    func()          // quits the app, so the staged release can be swapped in
+}
 
 // files stands between the window and the desk for what a web view cannot do
 // on its own: save a download, open a PDF beside the app, and put the page's
 // title in the title bar. The page is told to ask for them by shellJS. Everything else goes
 // straight to the desk.
-func files(desk http.Handler, p paths, pageTitle func(string)) http.Handler {
+func files(desk http.Handler, p paths, pageTitle func(string), up shellUpdate) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Settings asks which version of the app this is.
 		if r.Method == http.MethodGet && r.URL.Path == "/shell/about" {
@@ -33,6 +41,13 @@ func files(desk http.Handler, p paths, pageTitle func(string)) http.Handler {
 				Version string `json:"version"`
 				Note    string `json:"note"`
 			}{version, note})
+			return
+		}
+		// Settings asks about updates. GET says where things stand, check asks
+		// the release page now, and install downloads, checks and stages the
+		// new app, then quits so it can be swapped in and opened.
+		if strings.HasPrefix(r.URL.Path, "/shell/update") {
+			serveUpdate(w, r, up)
 			return
 		}
 		// Settings and the desk ask whether the app may use the local network.
@@ -136,6 +151,40 @@ func files(desk http.Handler, p paths, pageTitle func(string)) http.Handler {
 		w.Header().Set("Cache-Control", "no-cache")
 		desk.ServeHTTP(w, r)
 	})
+}
+
+func serveUpdate(w http.ResponseWriter, r *http.Request, up shellUpdate) {
+	answer := func(status int, body any) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "no-store")
+		w.WriteHeader(status)
+		_ = json.NewEncoder(w).Encode(body)
+	}
+	if up.updater == nil {
+		answer(http.StatusOK, update.State{Status: "off", Current: version})
+		return
+	}
+	u := up.updater
+	switch {
+	case r.Method == http.MethodGet && r.URL.Path == "/shell/update":
+		answer(http.StatusOK, u.State())
+	case r.Method == http.MethodPost && r.URL.Path == "/shell/update/check":
+		answer(http.StatusOK, u.Check(r.Context()))
+	case r.Method == http.MethodPost && r.URL.Path == "/shell/update/install":
+		// The download outlives the request: Settings follows it by asking GET.
+		go func() {
+			if err := u.Prepare(context.Background()); err != nil {
+				return
+			}
+			if err := u.Swap(); err != nil {
+				return
+			}
+			up.quit()
+		}()
+		answer(http.StatusAccepted, u.State())
+	default:
+		http.NotFound(w, r)
+	}
 }
 
 // isDownload is true for the desk's export addresses, with or without a query.

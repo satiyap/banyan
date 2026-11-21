@@ -128,6 +128,18 @@
                 <div class="set-sub" id="appBuild"></div>
               </div>
             </div>
+            <div class="set-row" id="updates" hidden>
+              <div class="set-label">Updates</div>
+              <div class="set-value">
+                <div class="perm-state"><span class="dot" id="updDot" aria-hidden="true"></span><span id="updState" aria-live="polite">Not checked yet</span></div>
+                <div class="set-sub" id="updSub"></div>
+                <pre class="set-sub upd-notes" id="updNotes" hidden></pre>
+              </div>
+              <div class="set-actions">
+                <button type="button" class="btn btn-quiet btn-sm" id="btnUpdCheck">Check now</button>
+                <button type="button" class="btn btn-sm" id="btnUpdInstall" hidden>Install and restart</button>
+              </div>
+            </div>
           </div>
         </section>
 

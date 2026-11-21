@@ -43,6 +43,8 @@ If macOS blocks the app the first time you open it, allow it under **System Sett
 
 The first time Banyan checks your printer, macOS asks whether it may find devices on your local network. Allow it, so Banyan can tell whether the printer is switched on. Printing works either way. **Settings ▸ Permissions** shows whether it's allowed, with a coloured dot, and opens System Settings if you need to change it.
 
+**Updates.** From 2.2.0 on, Banyan checks for a new release when it opens and every six hours after. When there is one, the title bar says so. **Settings ▸ This app ▸ Updates** shows what changed, and **Install and restart** downloads it, quits Banyan, puts the new version in place and opens it. Nothing installs until you click, so an update never interrupts a cheque. Your register, calibration and connection stay where they are. Banyan has to be in a folder you can write to (normally Applications), not running from the disk image. Earlier versions can't update themselves: download 2.2.0 once by hand.
+
 **Before you print a real cheque, print the test sheet on plain paper cut to leaf size and hold it against a real leaf.** Every printer feeds paper a little differently, and only a test print shows how yours does.
 
 ---
@@ -232,9 +234,24 @@ A failing replay means behaviour changed. If the change is intended, update the 
 | --- | --- | --- |
 | `ci.yml` | A push to `main`, or a pull request that changes code. Changes to docs and `*.md` alone don't trigger it. | The Go app's tests on macOS, the server's on Linux, and the TypeScript reference's typecheck and unit tests. The Electron app is frozen and its end-to-end run is no longer in CI. |
 | `image.yml` | A push to `main` that changes something in the server image. | Builds `ghcr.io/satiyap/banyan` on a GitHub-hosted ARM64 runner. |
-| `release.yml` | A `v*` tag. | Runs the Go tests, builds the Go app (`scripts/build-mac.sh`) into `Banyan-mac-arm64.dmg` and publishes a GitHub release. |
+| `release.yml` | A `v*` tag. | Runs the Go tests, builds the Go app (`scripts/build-mac.sh`) into `Banyan-mac-arm64.dmg`, signs `update.json` for installed apps, and publishes a GitHub release. |
 
 `pnpm release 2.1.0` sets the version in `package.json`, tags `v2.1.0` and pushes, and the tag builds and publishes the release. The workflow refuses a tag that doesn't match `package.json`. The latest disk image is always at `releases/latest/download/Banyan-mac-arm64.dmg`.
+
+### How auto-update works
+
+Every tagged release also publishes `update.json` beside the disk image: the version, the image's address on the release page, its size and SHA-256, and the release's section of `CHANGELOG.md`. The whole manifest is signed with an Ed25519 key. The private half is the `UPDATE_SIGNING_KEY` secret and nothing else holds it. The public half is compiled into the app (`internal/update/key.go`). A tagged release fails without the secret, because a release with no manifest would leave every installed app behind.
+
+The app (`internal/update`) fetches `releases/latest/download/update.json`, ignores it unless the signature verifies, the image is on this repository's release page and the version is newer, then:
+
+1. downloads the image and refuses it unless the size and SHA-256 match the manifest;
+2. mounts it read-only, copies `Banyan.app` beside the running app as `.Banyan-update.app`, and checks the bundle identifier, version and code signature;
+3. starts a small shell helper and quits normally, so the register is sent to the server on the way out;
+4. the helper waits for the app to exit, moves the old app to `updates/Banyan-previous.app` in the data folder, renames the new one into place and opens it. If the rename fails, the old app is put back and opened.
+
+The app downloads the image itself, so it never carries macOS's quarantine flag and an unsigned update opens without **Open Anyway**. An ad-hoc signature changes with every build, though, so macOS may ask the local-network question again after an update. A Developer ID signature fixes that.
+
+Development builds don't check for updates. To test the swap locally, build two dev versions, sign a manifest with a throwaway key (`go run ./cmd/updatesign -generate key`, then `-version … -dmg … -url http://127.0.0.1:PORT/…`), serve it, and start the older app with `BANYAN_UPDATE_URL` and `BANYAN_UPDATE_KEY` set. Losing the real private key means installed apps can't take another update until a new key ships by manual download.
 
 A release is signed and notarized when the repository holds an Apple Developer ID certificate. The secrets are listed at the top of `release.yml`. Without one the release is ad-hoc signed, and macOS will ask for **Open Anyway** the first time.
 
@@ -244,7 +261,7 @@ A release is signed and notarized when the repository holds an Apple Developer I
 - Better member sign-in. Today it's one key per browser, and sessions can only be seen or revoked through the admin routes.
 - The monthly PDF on the members' pages. It's drawn by the desk's browser engine, which the server doesn't have.
 - A plain-paper test print from the desktop app. Its rendered page matches the reference renderer's, but nothing has been printed from it yet.
-- Developer ID signing and auto-update. For now a new version is a new download.
+- Developer ID signing. Until then each release is ad-hoc signed.
 - Windows. Printing currently goes through the Mac's `lp`.
 - An off-site backup of the server's volume. The server keeps 200 copies of the register, but they're all on one volume.
 

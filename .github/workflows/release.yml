@@ -1,9 +1,10 @@
 # A release of the desktop app: `pnpm release 2.1.0` sets the version, tags
 # v2.1.0 and pushes; this builds the Go app (cmd/banyan, Wails 3) for Mac
 # (Apple silicon) and publishes one GitHub release holding
-# Banyan-mac-arm64.dmg, only once the build and its checks have worked. The
-# download link never changes:
-#   releases/latest/download/Banyan-mac-arm64.dmg
+# Banyan-mac-arm64.dmg and update.json, only once the build and its checks
+# have worked. Neither link ever changes:
+#   releases/latest/download/Banyan-mac-arm64.dmg   (the site's download)
+#   releases/latest/download/update.json           (what installed apps check)
 #
 # Running it by hand (Actions → Release → Run workflow) only builds: the disk
 # image is attached to the run and nothing is published.
@@ -16,6 +17,9 @@
 # the first time and must be allowed in System Settings ▸ Privacy & Security.
 #   MAC_CERT_P12_BASE64, MAC_CERT_PASSWORD, APPLE_ID,
 #   APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID
+#
+# Updates. UPDATE_SIGNING_KEY (made with `go run ./cmd/updatesign -generate`)
+# signs update.json. A tagged release fails without it.
 name: Release
 
 on:
@@ -107,10 +111,30 @@ jobs:
           xcrun notarytool submit dist/Banyan-mac-arm64.dmg --apple-id "$APPLE_ID" --password "$APPLE_APP_SPECIFIC_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
           xcrun stapler staple dist/Banyan-mac-arm64.dmg
           spctl --assess --type open --context context:primary-signature dist/Banyan-mac-arm64.dmg
+      # The manifest installed apps follow to update themselves. It is signed
+      # with UPDATE_SIGNING_KEY, whose public half the app carries; a release
+      # without it would leave every installed app behind, so it is required.
+      # Made after notarization, so it names the stapled disk image.
+      - name: Update manifest
+        if: github.event_name == 'push' && github.ref_type == 'tag'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+        run: |
+          test -n "$UPDATE_SIGNING_KEY" || { echo "::error::UPDATE_SIGNING_KEY is not set"; exit 1; }
+          # This release's section of CHANGELOG.md, without the Markdown marks.
+          awk -v v="## $VERSION " 'index($0, v) == 1 {on=1; next} /^## / {on=0} on' CHANGELOG.md \
+            | sed -e 's/\*\*//g' -e 's/`//g' > "$RUNNER_TEMP/notes.txt"
+          test -s "$RUNNER_TEMP/notes.txt" || { echo "::error::CHANGELOG.md has no section for $VERSION"; exit 1; }
+          GOWORK=off go run ./cmd/updatesign -version "$VERSION" -dmg dist/Banyan-mac-arm64.dmg \
+            -notes "$RUNNER_TEMP/notes.txt" -out dist/update.json
+          cat dist/update.json
       - uses: actions/upload-artifact@v4
         with:
           name: banyan-mac
-          path: dist/Banyan-mac-arm64.dmg
+          path: |
+            dist/Banyan-mac-arm64.dmg
+            dist/update.json
           if-no-files-found: error
 
   # Only a pushed tag publishes, and only once the build worked; a run by hand never does.
