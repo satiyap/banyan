@@ -108,11 +108,14 @@ type App struct {
 	writing sync.Mutex
 
 	// Report heads and notes, and the round with the server that keeps them level.
-	notes    *db.Annotations
-	annMu    sync.Mutex // one round with the server at a time
-	kick     chan struct{}
-	stop     chan struct{}
-	stopOnce sync.Once
+	notes *db.Annotations
+	annMu sync.Mutex // one round with the server at a time
+	// The name the server shows this desk's edits under, learnt at each round.
+	selfMu    sync.Mutex
+	selfLabel string
+	kick      chan struct{}
+	stop      chan struct{}
+	stopOnce  sync.Once
 }
 
 // New opens the register and loads the calibration. It fails at once when the

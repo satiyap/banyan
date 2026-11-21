@@ -428,7 +428,7 @@ function toggleSel(id) {
 function entityTable(desk) {
   const box = h('section.panel.ent-panel');
   const list = h('div.ent-list');
-  const search = h('input', { type: 'search', placeholder: 'Find an entity, payee or head', value: DeskView.filter,
+  const search = h('input', { type: 'search', placeholder: 'Find an entity, payee or category', value: DeskView.filter,
                               'aria-label': 'Find an entity' });
   const show = h('select', { 'aria-label': 'Show' },
     [['', 'Everyone'], ['due', 'Due or overdue'], ['regular', 'Regulars'], ['one_off', 'One-offs'], ['unpaid', 'Never paid']]
@@ -438,7 +438,7 @@ function entityTable(desk) {
     DeskView.filter = search.value;
     DeskView.show = show.value;
     const rows = desk.entities.filter(e => {
-      if (q && !fold([e.entity_name, e.payee_name, e.category, e.notes].join(' ')).includes(q)) return false;
+      if (q && !fold([e.entity_name, e.payee_name, e.category, e.head, e.notes].join(' ')).includes(q)) return false;
       const r = rhythmOf(e.id);
       if (show.value === 'due') return r && ['overdue', 'due-now', 'due-soon'].includes(r.status) && e.kind !== 'one_off';
       if (show.value === 'regular') return e.kind !== 'one_off';

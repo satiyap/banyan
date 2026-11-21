@@ -2,9 +2,17 @@
 
 What each release of the Banyan desktop app does. The full history is in the git log.
 
+## 2.4.0 — 2026-11-21
+
+- Change a category or note from inside the Year and Monthly reports: open an entity, a category or a month's line, then any cheque.
+- The edit panel shows what a change moves before saving, and offers Undo.
+- The desk's Review lists members' changes, with a count on the rail, and changes several cheques at once.
+- "Head" is now called Category everywhere; the old free-text category is now Description.
+- Install and restart now reopens Banyan after updating.
+
 ## 2.3.0 — 2026-11-21
 
-- Heads: anyone with a key can set the report head and note on an entity or a single leaf.
+- Categories: anyone with a key can set the category and note on an entity or a single leaf.
 - Members can see every leaf in the reports.
 - Changes show who made them; the latest change wins.
 

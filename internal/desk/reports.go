@@ -1,6 +1,7 @@
 package desk
 
 import (
+	"cmp"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -8,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/satiyap/banyan/internal/annotate"
 	"github.com/satiyap/banyan/internal/db"
 	"github.com/satiyap/banyan/internal/pycompat"
 	"github.com/satiyap/banyan/internal/reports"
@@ -128,6 +130,9 @@ func (a *App) monthlyReportPDF(rq *req) (*response, error) {
 		words := strings.FieldsFunc(reports.FyLabel(*d.Fy), pycompat.IsSpace)
 		period = "fy-" + strings.Replace(words[len(words)-1], "–", "-", 1)
 	}
+	if err := a.monthlyNotes(d); err != nil {
+		return nil, err
+	}
 	name := "banyan-monthly-" + period + ".pdf"
 	folder, err := os.MkdirTemp(a.cfg.PDFDir, "banyan-report-")
 	if err != nil {
@@ -159,12 +164,12 @@ func (a *App) report(rq *req) (*response, error) {
 
 var reportCSVHeads = map[string][]string{
 	"entities": {
-		"Entity", "Prints as", "Kind", "Head", "Cheques", "Total (INR)", "Share %",
+		"Entity", "Prints as", "Kind", "Category", "Cheques", "Total (INR)", "Share %",
 		"Average (INR)", "Largest (INR)", "Previous period (INR)", "Last paid",
 	},
-	"categories": {"Head", "Entities", "Cheques", "Total (INR)", "Share %", "Previous period (INR)"},
+	"categories": {"Category", "Entities", "Cheques", "Total (INR)", "Share %", "Previous period (INR)"},
 	"payees":     {"Payee (as printed)", "Entities", "Cheques", "Total (INR)", "Share %"},
-	"cheques":    {"Cheque no", "Cheque date", "Payee", "Entity", "Head", "Amount (INR)", "Memo", "Status"},
+	"cheques":    {"Cheque no", "Cheque date", "Payee", "Entity", "Category", "Amount (INR)", "Memo", "Status"},
 }
 
 func csvResponse(text, filename string) *response {
@@ -325,4 +330,77 @@ func (a *App) exportCSV(rq *req) (*response, error) {
 func (a *App) listEverything() ([]db.ChequeWithEntity, error) {
 	all := int64(100000)
 	return a.db.ListCheques(db.ListChequesOptions{Limit: &all})
+}
+
+// monthlyNotes puts each entity's note, and its leaves' notes for the month,
+// beside it in the monthly report, for the PDF the committee reads.
+func (a *App) monthlyNotes(d *reports.MonthlyReport) error {
+	rows, entities, err := a.reportInputs()
+	if err != nil {
+		return err
+	}
+	set, err := a.annotationSet()
+	if err != nil {
+		return err
+	}
+	all, err := a.db.ListEntities()
+	if err != nil {
+		return err
+	}
+	entityNote := map[int64]string{}
+	for _, e := range all {
+		entityNote[e.ID] = e.Notes
+		if x, ok := set.Get(annotate.EntitySubject(e.ID), annotate.Notes); ok {
+			entityNote[e.ID] = x.Value
+		}
+	}
+	byID := map[int64]*reports.ReportEntityRow{}
+	for i := range entities {
+		byID[entities[i].ID] = &entities[i]
+	}
+	type key struct{ month, head, name string }
+	found := map[key][]string{}
+	seen := map[key]map[string]bool{}
+	add := func(k key, text string) {
+		if text = strings.TrimSpace(text); text == "" {
+			return
+		}
+		if seen[k] == nil {
+			seen[k] = map[string]bool{}
+		}
+		if !seen[k][text] {
+			seen[k][text] = true
+			found[k] = append(found[k], text)
+		}
+	}
+	for i := range rows {
+		r := &rows[i]
+		if len(r.ChequeDate) < 7 {
+			continue
+		}
+		var e *reports.ReportEntityRow
+		name := r.Payee
+		if r.EntityID != nil {
+			e = byID[*r.EntityID]
+		}
+		if e != nil {
+			name = cmp.Or(e.EntityName, e.PayeeName)
+		}
+		k := key{r.ChequeDate[:7], reports.HeadOfRow(e, r), name}
+		if e != nil {
+			add(k, entityNote[e.ID])
+		}
+		if r.ChequeNo != "" && strings.TrimSpace(r.Memo) != "" {
+			add(k, r.ChequeNo+": "+r.Memo)
+		} else {
+			add(k, r.Memo)
+		}
+	}
+	for i := range d.Months {
+		for j := range d.Months[i].Entities {
+			n := &d.Months[i].Entities[j]
+			n.Notes = found[key{d.Months[i].Month, n.Head, n.Name}]
+		}
+	}
+	return nil
 }

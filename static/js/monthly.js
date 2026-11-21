@@ -7,7 +7,7 @@
  */
 'use strict';
 
-const MonthlyPage = { range: stored('banyan.monthly.range', 'fy'), fy: null, data: null };
+const MonthlyPage = { range: stored('banyan.monthly.range', 'fy'), fy: null, data: null, leaves: null, open: new Set() };
 
 function monthlyColour(heads) {
   const map = new Map(heads.map((x, i) => [x.head, HEAD_COLOURS[i] || OTHER_COLOUR]));
@@ -26,6 +26,13 @@ Places.monthly = {
     else if (P.fy != null) q.set('fy', P.fy);
     try { P.data = await api(`/api/reports/monthly?${q}`); }
     catch (err) { clear(root, h('p.empty', err.message)); return; }
+    // The months' cheques with their heads and notes, for opening an entity's line.
+    P.leaves = null;
+    const months = P.data.months;
+    if (months.length) {
+      const lq = new URLSearchParams({ from: `${months[0].month}-01`, to: `${months[months.length - 1].month}-31` });
+      try { P.leaves = await api(`/api/reports/leaves?${lq}`); } catch (err) { P.leaves = null; }
+    }
     if (!root.isConnected) return;
     if (P.data.fy != null) P.fy = P.data.fy;
     root.replaceChildren();
@@ -77,10 +84,10 @@ function monthlyMoney(p) { return p ? rupees(p, { whole: true }) : '—'; }
 /* Heads down, months across, totals both ways. */
 function monthlyMatrix(d, months, colour) {
   return h('section.panel.mo-panel',
-    h('div.panel-head', h('h3', 'Month by head')),
+    h('div.panel-head', h('h3', 'Month by category')),
     h('div.mo-scroll',
       h('table.head-table.mo-table',
-        h('thead', h('tr', h('th', 'Head'),
+        h('thead', h('tr', h('th', 'Category'),
           months.map(m => h('th.num', m.label.replace(/ (\d\d)(\d\d)$/, ' $2'), m.current ? h('span.mo-part', 'to date') : null)),
           h('th.num', 'Total'))),
         h('tbody', d.heads.map(x => h('tr',
@@ -106,9 +113,36 @@ function monthlyBars(d, months, colour) {
       h('span.mono.num', monthlyMoney(m.paise)))));
 }
 
-/* Newest month first: each head and the entities paid under it. */
+/* Newest month first: each head and the entities paid under it. An entity's
+   line opens to its cheques that month, where a head or note can be changed. */
 function monthlyDetail(d, months, colour) {
-  return h('section.panel.mo-panel',
+  const P = MonthlyPage, L = P.leaves;
+  const repaint = key => {
+    $('.mo-detail').replaceWith(monthlyDetail(d, months, colour));
+    hydrateIcons($('.mo-detail'));
+    const again = $(`[data-drill="${CSS.escape(key)}"]`);
+    if (again) again.focus();
+  };
+  const entityLine = (m, e) => {
+    const plain = h('li', h('span', e.name), h('span.mono.num', monthlyMoney(e.paise)));
+    if (!L) return plain;
+    const leaves = L.leaves.filter(l => l.cheque_date.slice(0, 7) === m.month && l.head === e.head && l.entity_name === e.name);
+    if (!leaves.length) return plain;
+    const ent = L.entities.find(x => x.id === leaves[0].entity_id);
+    const noted = (ent && ent.notes) || (leaves.find(l => l.notes) || {}).notes;
+    const key = `${m.month}|${e.head}|${e.name}`;
+    const open = P.open.has(key);
+    const id = 'mo-drill-' + key.replace(/[^a-z0-9]+/gi, '-');
+    const ctx = { heads: L.heads, colour, leaves: L.leaves, entities: L.entities, label: m.label, onSaved: () => route() };
+    const toggle = () => { if (P.open.has(key)) P.open.delete(key); else P.open.add(key); repaint(key); };
+    return [
+      h('li.ann-mo-item' + (open ? '.is-open' : ''),
+        h('button.ann-toggle', { type: 'button', 'aria-expanded': String(open), 'aria-controls': id, 'data-drill': key, onclick: toggle },
+          e.name), noteMark(noted),
+        h('span.mono.num', monthlyMoney(e.paise))),
+      open ? h('li.ann-mo-drill', { id }, leafDrill(leaves, ctx)) : null];
+  };
+  return h('section.panel.mo-panel.mo-detail',
     h('div.panel-head', h('h3', 'Month by month')),
     months.filter(m => m.count).reverse().map(m => h('div.mo-month',
       h('div.mo-month-head',
@@ -117,6 +151,5 @@ function monthlyDetail(d, months, colour) {
       h('div.mo-groups', d.heads.filter(x => m.heads[x.head]).map(x => h('div.mo-group',
         h('div.mo-group-head', h('i.mo-sw', { style: { background: colour(x.head) } }), h('span', x.head),
           h('span.mono.num', monthlyMoney(m.heads[x.head]))),
-        h('ul', m.entities.filter(e => e.head === x.head).map(e =>
-          h('li', h('span', e.name), h('span.mono.num', monthlyMoney(e.paise)))))))))));
+        h('ul', m.entities.filter(e => e.head === x.head).map(e => entityLine(m, e)))))))));
 }

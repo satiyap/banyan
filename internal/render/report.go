@@ -196,7 +196,11 @@ func (r *Renderer) BuildReportHTML(d *reports.MonthlyReport, today time.Time) (s
 				`<span class="num">` + inr(amt) + `</span></h4><ul>`)
 			for _, n := range m.Entities {
 				if n.Head == x.Head {
-					groups.WriteString(`<li><span>` + e(n.Name) + `</span><span class="num">` + inr(n.Paise) + `</span></li>`)
+					groups.WriteString(`<li><span>` + e(n.Name) + `</span><span class="num">` + inr(n.Paise) + `</span>`)
+					for _, text := range n.Notes {
+						groups.WriteString(`<p class="li-note">` + e(text) + `</p>`)
+					}
+					groups.WriteString(`</li>`)
 				}
 			}
 			groups.WriteString(`</ul></div>`)
@@ -240,16 +244,16 @@ func (r *Renderer) BuildReportHTML(d *reports.MonthlyReport, today time.Time) (s
 		eyebrow += ", April to March"
 	}
 
-	return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Monthly spend by head</title><style>
+	return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Monthly spend by category</title><style>
 ` + fonts.String() + reportCSS + `
 </style></head><body>
-<div class="mast"><b>Banyan</b><span>Monthly spend by head · generated ` + generated + `</span></div>
+<div class="mast"><b>Banyan</b><span>Monthly spend by category · generated ` + generated + `</span></div>
 <p class="eyebrow">` + eyebrow + `</p>
 <h1>` + e(title) + `: ` + lakhs(t.Paise) + ` paid</h1><p class="lede">` + lede + `</p>
 <div class="kpis"><div><b>` + inr(t.Paise) + `</b><span>total paid</span></div>
 <div><b>` + inr(t.PerMonthPaise) + `</b><span>a month on average</span></div>
 <div><b>` + strconv.Itoa(t.Count) + `</b><span>cheques</span></div></div>
-<div class="keep"><h2>Month by head</h2><table><thead><tr><th>Head</th>` + th.String() + `<th class="num">Total</th></tr></thead>
+<div class="keep"><h2>Month by category</h2><table><thead><tr><th>Category</th>` + th.String() + `<th class="num">Total</th></tr></thead>
 <tbody>` + body.String() + `</tbody><tfoot><tr><th>Total</th>` + foot.String() + `<td class="num">` + money(t.Paise) + `</td></tr></tfoot></table></div>
 <div class="keep"><h2>How each month splits</h2><div class="legend">` + legend.String() + `</div>` + bars.String() + `</div>
 <h2>Month by month</h2>` + detail.String() + `
@@ -289,7 +293,8 @@ small{display:block;font-weight:400;font-size:7pt;color:var(--muted)}
 .month p{margin:0;color:var(--muted);font-size:8.5pt}.month p b{font:400 11pt "Hedvig Letters Serif",serif;color:var(--ink)}
 .grps{columns:2;column-gap:22pt;margin-top:6pt}.grp{break-inside:avoid;margin-bottom:8pt}
 h4{display:flex;align-items:center;margin:0 0 2pt;font-size:9pt;font-weight:600}h4 .num{margin-left:auto}
-ul{list-style:none;margin:0;padding:0}li{display:flex;justify-content:space-between;gap:8pt;padding:1.5pt 0 1.5pt 12pt;color:var(--ink-2);border-bottom:.5pt dotted var(--rule)}
+ul{list-style:none;margin:0;padding:0}li{display:flex;flex-wrap:wrap;column-gap:8pt;justify-content:space-between;gap:8pt;padding:1.5pt 0 1.5pt 12pt;color:var(--ink-2);border-bottom:.5pt dotted var(--rule)}
+.li-note{flex-basis:100%;margin:0 0 1pt;font-size:7.5pt;line-height:1.3;color:var(--muted)}
 .keep{break-inside:avoid}
 .foot{margin-top:16pt;color:var(--muted);font-size:7.5pt;border-top:.5pt solid var(--rule);padding-top:5pt}`
 

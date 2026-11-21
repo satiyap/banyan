@@ -187,6 +187,9 @@ type MonthlyEntity struct {
 	Name  string `json:"name"`
 	Count int    `json:"count"`
 	Paise int64  `json:"paise"`
+	// Notes are the entity's note and its leaves' notes for the month, for
+	// the PDF only: the page reads them with each leaf.
+	Notes []string `json:"-"`
 }
 
 type MonthlyMonth struct {

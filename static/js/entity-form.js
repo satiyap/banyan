@@ -83,7 +83,7 @@ function entityForm(entity, prefill = {}, opts = {}) {
   }
   const head = h('input', { type: 'text', value: e.category, placeholder: 'e.g. maintenance',
                             maxlength: '60', list: 'headList', autocomplete: 'off' });
-  const reportHead = h('select', { 'aria-label': 'Report head' },
+  const reportHead = h('select', { 'aria-label': 'Category' },
     h('option', { value: '', selected: !e.head }, 'Not chosen'),
     ['Salary', 'Utilities', 'AMC', 'Misc', 'GST / Tax'].map(x => h('option', { value: x, selected: e.head === x }, x)));
   const heads = h('datalist', { id: 'headList' },
@@ -201,8 +201,8 @@ function entityForm(entity, prefill = {}, opts = {}) {
       oneOffNote),
     payeeField(),
     h('div.field-row',
-      field('Report head', reportHead),
-      field('Category · a note', head),
+      field('Category', reportHead),
+      field('Description · a note', head),
       amount ? field('Amount', h('div.amount-input', h('span', '₹'), amount)) : null),
     heads,
     h('div.field', h('div.label', 'Date rule'), ruleBox),

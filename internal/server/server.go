@@ -517,7 +517,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Heads and notes. The writing desk takes the whole set to keep its
 	// register level; any desk sends an edit, as its key.
 	case get && p == "/api/v1/annotations":
-		if _, err := s.writer(r); err != nil {
+		session, err := s.writer(r)
+		if err != nil {
 			fail(w, err)
 			return
 		}
@@ -526,9 +527,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			fail(w, err)
 			return
 		}
+		// You is the name this desk's own edits carry, so it can tell them from members'.
 		writeJSON(w, 200, struct {
-			Annotations any `json:"annotations"`
-		}{list})
+			Annotations any    `json:"annotations"`
+			You         string `json:"you"`
+		}{list, authorOf(session)})
 
 	case post && p == "/api/v1/annotations":
 		session, err := s.deskSession(r)

@@ -11,6 +11,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"regexp"
 	"slices"
 	"time"
 
@@ -63,8 +64,9 @@ func (a *App) HasSubject(subject string) (bool, error) {
 // -- the leaves report ---------------------------------------------------
 
 type edited struct {
-	By string `json:"by"`
-	At string `json:"at"`
+	By   string `json:"by"`
+	At   string `json:"at"`
+	Mine bool   `json:"mine"`
 }
 
 type leafRow struct {
@@ -97,23 +99,61 @@ type leafEntity struct {
 	NotesEdited *edited `json:"notes_edited"`
 }
 
-func editedOf(set annotate.Set, subject, field string) *edited {
+// mine is true for an edit this desk made: still pending, or accepted by the
+// server under the label of this desk's key.
+func (a *App) mine(by string) bool {
+	if by == deskAuthor {
+		return true
+	}
+	a.selfMu.Lock()
+	defer a.selfMu.Unlock()
+	return a.selfLabel != "" && by == a.selfLabel
+}
+
+func (a *App) editedOf(set annotate.Set, subject, field string) *edited {
 	if x, ok := set.Get(subject, field); ok {
-		return &edited{By: x.UpdatedBy, At: x.UpdatedAt}
+		return &edited{By: x.UpdatedBy, At: x.UpdatedAt, Mine: a.mine(x.UpdatedBy)}
 	}
 	return nil
 }
 
-// leaves is every leaf issued in a period, with its head and note, and the
-// entities they were paid to: the page where heads and notes are changed.
+func byOthers(e ...*edited) bool {
+	for _, x := range e {
+		if x != nil && !x.Mine {
+			return true
+		}
+	}
+	return false
+}
+
+var isoDate = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
+
+// leaves is every leaf of a period with its head and note, and the entities
+// they were paid to. The reports open it to show what is under a head, an
+// entity or a month, and to change a head or note; the desk's review list
+// reads it too.
+//
+// The period is a financial year (fy, quarter), or from and to dates for the
+// Monthly page's last six months. view=changed is instead every leaf and
+// entity, of any date, whose head or note someone other than this desk changed.
 func (a *App) leaves(rq *req) (*response, error) {
 	fy := rq.queryInt("fy", optionalInt)
 	quarter := rq.queryInt("quarter", optionalInt)
+	from := rq.queryStr("from", str(strOptions{def: def("")}))
+	to := rq.queryStr("to", str(strOptions{def: def("")}))
+	view := rq.queryStr("view", str(strOptions{def: def("")}))
 	if err := rq.check(); err != nil {
 		return nil, err
 	}
 	if quarter != nil && (*quarter < 1 || *quarter > 4) {
 		return nil, refuse(http.StatusBadRequest, "quarter must be 1, 2, 3 or 4")
+	}
+	if (from != "" || to != "") && (!isoDate.MatchString(from) || !isoDate.MatchString(to) || from > to) {
+		return nil, refuse(http.StatusBadRequest, "from and to are dates, from first")
+	}
+	changed := view == "changed"
+	if view != "" && !changed {
+		return nil, refuse(http.StatusBadRequest, "view is changed, or not given")
 	}
 	rows, entities, err := a.reportInputs()
 	if err != nil {
@@ -140,6 +180,12 @@ func (a *App) leaves(rq *req) (*response, error) {
 	if err != nil {
 		return nil, err
 	}
+	switch {
+	case changed:
+		start, end, label = "", "9999-12-31", "Changed by others"
+	case from != "":
+		start, end, label = from, to, from+" to "+to
+	}
 	years, err := reports.Years(rows, a.today())
 	if err != nil {
 		return nil, err
@@ -157,10 +203,33 @@ func (a *App) leaves(rq *req) (*response, error) {
 	for i := range entities {
 		byID[entities[i].ID] = &entities[i]
 	}
-
-	out := []leafRow{}
 	tally := map[int64]*leafEntity{}
 	order := []int64{}
+	entityOf := func(e *reports.ReportEntityRow) *leafEntity {
+		t := tally[e.ID]
+		if t == nil {
+			es := annotate.EntitySubject(e.ID)
+			t = &leafEntity{
+				ID: e.ID, Name: cmp.Or(e.EntityName, e.PayeeName), PayeeName: e.PayeeName, Head: reports.HeadOf(e),
+				HeadEdited: a.editedOf(set, es, annotate.Head), NotesEdited: a.editedOf(set, es, annotate.Notes),
+				Notes: notes[e.ID],
+			}
+			if e.Kind != nil {
+				t.Kind = *e.Kind
+			}
+			if e.Head != nil && slices.Contains(reports.HEADS, *e.Head) {
+				t.HeadSet = *e.Head
+			}
+			if x, ok := set.Get(es, annotate.Notes); ok {
+				t.Notes = x.Value
+			}
+			tally[e.ID] = t
+			order = append(order, e.ID)
+		}
+		return t
+	}
+
+	out := []leafRow{}
 	for i := range rows {
 		r := &rows[i]
 		if r.ChequeDate < start || r.ChequeDate > end {
@@ -175,44 +244,40 @@ func (a *App) leaves(rq *req) (*response, error) {
 			ID: r.ID, ChequeNo: r.ChequeNo, ChequeDate: r.ChequeDate, Payee: r.Payee, EntityID: r.EntityID,
 			EntityName: r.Payee, AmountPaise: r.AmountPaise, Head: reports.HeadOfRow(e, r),
 			EntityHead: reports.HeadOf(e), Notes: r.Memo,
-			HeadEdited: editedOf(set, subject, annotate.Head), NotesEdited: editedOf(set, subject, annotate.Notes),
+			HeadEdited: a.editedOf(set, subject, annotate.Head), NotesEdited: a.editedOf(set, subject, annotate.Notes),
+		}
+		if changed && !byOthers(row.HeadEdited, row.NotesEdited) {
+			continue
 		}
 		if r.Head != nil {
 			row.OwnHead = *r.Head
 		}
 		if e != nil {
-			row.EntityName = cmp.Or(e.EntityName, e.PayeeName)
-			t := tally[e.ID]
-			if t == nil {
-				es := annotate.EntitySubject(e.ID)
-				t = &leafEntity{
-					ID: e.ID, Name: row.EntityName, PayeeName: e.PayeeName, Head: reports.HeadOf(e),
-					HeadEdited: editedOf(set, es, annotate.Head), NotesEdited: editedOf(set, es, annotate.Notes),
-				}
-				if e.Kind != nil {
-					t.Kind = *e.Kind
-				}
-				if e.Head != nil && slices.Contains(reports.HEADS, *e.Head) {
-					t.HeadSet = *e.Head
-				}
-				t.Notes = notes[e.ID]
-				if x, ok := set.Get(es, annotate.Notes); ok {
-					t.Notes = x.Value
-				}
-				tally[e.ID] = t
-				order = append(order, e.ID)
-			}
+			t := entityOf(e)
+			row.EntityName = t.Name
 			t.Count++
 			t.Paise += r.AmountPaise
 		}
 		out = append(out, row)
+	}
+	// An entity someone else re-headed or noted is listed even with no leaf
+	// of its own among those changed.
+	if changed {
+		for i := range entities {
+			es := annotate.EntitySubject(entities[i].ID)
+			if byOthers(a.editedOf(set, es, annotate.Head), a.editedOf(set, es, annotate.Notes)) {
+				entityOf(&entities[i])
+			}
+		}
 	}
 	slices.SortStableFunc(out, func(x, y leafRow) int {
 		return cmp.Or(cmp.Compare(y.ChequeDate, x.ChequeDate), cmp.Compare(y.ChequeNo, x.ChequeNo))
 	})
 	ents := make([]*leafEntity, 0, len(order))
 	for _, id := range order {
-		ents = append(ents, tally[id])
+		if !changed || tally[id].Count > 0 || byOthers(tally[id].HeadEdited, tally[id].NotesEdited) {
+			ents = append(ents, tally[id])
+		}
 	}
 	slices.SortStableFunc(ents, func(x, y *leafEntity) int { return cmp.Compare(y.Paise, x.Paise) })
 
@@ -357,6 +422,7 @@ func (a *App) SyncAnnotations() error {
 
 	var server struct {
 		Annotations []annotate.Annotation `json:"annotations"`
+		You         string                `json:"you"`
 	}
 	status2, err := a.sendJSON(http.MethodGet, "/api/v1/annotations", nil, &server)
 	if err != nil {
@@ -365,6 +431,9 @@ func (a *App) SyncAnnotations() error {
 	if status2 != http.StatusOK {
 		return &httpError{status: status2, detail: "the server did not send heads and notes"}
 	}
+	a.selfMu.Lock()
+	a.selfLabel = server.You
+	a.selfMu.Unlock()
 	changes := make([]db.AnnotationChange, len(server.Annotations))
 	for i, x := range server.Annotations {
 		changes[i] = db.AnnotationChange{Subject: x.Subject, Field: x.Field, Value: x.Value, At: x.UpdatedAt, By: x.UpdatedBy}

@@ -311,7 +311,7 @@ function openPicker(input, i) {
     items.map((it, k) => it.create != null
       ? h('div.picker-item.picker-create', { role: 'option', dataset: { k: String(k) } },
           icon('plus'), h('div', h('div.strong', `Create entity “${it.create}…”`),
-            h('div.sub', 'Name it, set the payee printed on the leaf, head and date rule')), h('kbd', 'Enter'))
+            h('div.sub', 'Name it, set the payee printed on the leaf, category and date rule')), h('kbd', 'Enter'))
       : it.oneOff != null
       ? h('div.picker-item.picker-oneoff', { role: 'option', dataset: { k: String(k) } },
           icon('pen'), h('div', h('div.strong', `Use “${it.oneOff}” as a one-off payee`),

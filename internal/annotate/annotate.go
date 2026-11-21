@@ -80,7 +80,7 @@ func Clean(subject, field, value string) (string, error) {
 	case Head:
 		value = strings.TrimSpace(value)
 		if value != "" && !slices.Contains(reports.HEADS, value) {
-			return "", errors.New("a head is one of " + strings.Join(reports.HEADS, ", "))
+			return "", errors.New("a category is one of " + strings.Join(reports.HEADS, ", "))
 		}
 		return value, nil
 	case Notes:
@@ -93,7 +93,7 @@ func Clean(subject, field, value string) (string, error) {
 		}
 		return value, nil
 	}
-	return "", errors.New("only the head and the notes can be changed")
+	return "", errors.New("only the category and the note can be changed")
 }
 
 // Set is every annotation, looked up by subject and field.

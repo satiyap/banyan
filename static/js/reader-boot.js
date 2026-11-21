@@ -1,8 +1,8 @@
-/* Start the members' report pages: the desk's Year and Monthly, and Heads & notes. */
+/* Start the members' report pages: the desk's Year and Monthly. A head or a note is changed from inside them. */
 'use strict';
 
 (function () {
-  const READABLE = /^#\/(year|monthly|leaves)(\/|\?|$)/;
+  const READABLE = /^#\/(year|monthly)(\/|\?|$)/;
   // The desk's router falls back to its Desk place, which does not exist here.
   Places.desk = Places.year;
 

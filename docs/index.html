@@ -94,9 +94,9 @@
   <div class="container">
     <div class="split">
       <h2 class="head">The year, already added up.</h2>
-      <p class="lead">By expense head, quarter and payee, with a monthly PDF and CSV exports.</p>
+      <p class="lead">By category, quarter and payee, with a monthly PDF and CSV exports.</p>
     </div>
-    <figure class="shot crop wide"><img loading="lazy" src="assets/img/year.webp" width="1700" height="1062" alt="The Year report: total paid in the financial year, a breakdown by expense head, month-by-month bars grouped by quarter, and a list of who was paid."></figure>
+    <figure class="shot crop wide"><img loading="lazy" src="assets/img/year.webp" width="1700" height="1062" alt="The Year report: total paid in the financial year, a breakdown by category, month-by-month bars grouped by quarter, and a list of who was paid."></figure>
   </div>
 </section>
 
@@ -132,9 +132,19 @@
     <h2 class="head">Changelog</h2>
     <ol class="timeline">
       <li>
+        <div class="when"><h3>2.4.0</h3><time datetime="2026-11-21">21 Nov 2026</time></div>
+        <ul>
+          <li>Change a category or note from inside the Year and Monthly reports: open an entity, a category or a month’s line, then any cheque.</li>
+          <li>The edit panel shows what a change moves before saving, and offers Undo.</li>
+          <li>The desk’s Review lists members’ changes, with a count on the rail, and changes several cheques at once.</li>
+          <li>“Head” is now called Category everywhere; the old free-text category is now Description.</li>
+          <li>Install and restart now reopens Banyan after updating.</li>
+        </ul>
+      </li>
+      <li>
         <div class="when"><h3>2.3.0</h3><time datetime="2026-11-21">21 Nov 2026</time></div>
         <ul>
-          <li>Heads: anyone with a key can set the report head and note on an entity or a single leaf.</li>
+          <li>Categories: anyone with a key can set the category and note on an entity or a single leaf.</li>
           <li>Members can see every leaf in the reports.</li>
           <li>Changes show who made them; the latest change wins.</li>
         </ul>

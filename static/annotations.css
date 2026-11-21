@@ -1,13 +1,141 @@
-/* Heads & notes: one row per leaf or entity, with the two things anyone may change. */
-.ann-list { display: grid; }
-.ann-row { display: grid; grid-template-columns: minmax(180px, 1.5fr) 110px 120px minmax(170px, 1fr) minmax(200px, 1.6fr); gap: var(--space-sm); align-items: center; padding: 10px var(--space-2xs); border-top: 1px solid var(--rule-soft); }
-.ann-row .strong { font-size: 16px; font-weight: 600; }
-.ann-row > .num { text-align: right; font-size: 16px; font-weight: 500; }
-.ann-headings { border-top: 0; color: var(--ink-3); font-size: 13px; padding-top: 0; padding-bottom: var(--space-2xs); }
-.ann-row select, .ann-row .ann-note { width: 100%; }
-.ann-edited { margin-top: 4px; font-size: 12px; }
-.ann-search { min-width: 220px; }
-@media (max-width: 900px) {
-  .ann-row { grid-template-columns: 1fr 1fr; }
-  .ann-headings { display: none; }
+/* Heads and notes: the edit panel the reports open, the cheques behind a
+   report row, and the desk's review list. Reports stay read-only; the panel
+   is the one place a head or a note changes. */
+
+/* ---------------------------------------------------------- the panel */
+dialog.ann-panel {
+  border: 0; padding: 0; margin: 0 0 0 auto; height: 100%; max-height: 100%; max-width: 100%;
+  width: min(440px, 100%); background: var(--panel); color: var(--ink);
+  box-shadow: var(--shadow-sheet); border-radius: 0;
 }
+dialog.ann-panel[open] { animation: ann-in var(--dur-short) var(--ease-out); }
+dialog.ann-panel::backdrop { background: var(--scrim); }
+@keyframes ann-in { from { transform: translateX(24px); opacity: 0.4; } }
+@media (prefers-reduced-motion: reduce) { dialog.ann-panel[open] { animation: none; } }
+
+.ann-form { display: flex; flex-direction: column; gap: var(--space-md); height: 100%; overflow: auto; padding: var(--space-lg) var(--space-lg) var(--space-md); }
+.ann-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-sm); }
+.ann-head h2 { font: 400 22px/1.15 var(--display); letter-spacing: var(--tracking-display); margin: 0; text-wrap: balance; }
+.ann-facts { margin: var(--space-2xs) 0 0; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.ann-head .sub { margin: 2px 0 0; }
+.ann-close { flex: none; }
+
+.ann-heads { border: 0; padding: 0; margin: 0; }
+.ann-heads legend, .ann-note label { font-weight: 600; font-size: 14px; margin-bottom: var(--space-xs); padding: 0; }
+.ann-options { display: grid; gap: 2px; }
+.ann-option { display: flex; align-items: center; gap: var(--space-sm); padding: 9px var(--space-sm); border-radius: 2px; cursor: pointer; min-height: 40px; }
+.ann-option:hover { background: var(--bench); }
+.ann-option:has(input:checked) { background: var(--bench); box-shadow: inset 0 0 0 1px var(--rule); font-weight: 500; }
+.ann-option input { accent-color: var(--ink); margin: 0; }
+.ann-option i { width: 12px; height: 12px; border-radius: 2px; flex: none; }
+.ann-option i.ann-none { background: none; box-shadow: inset 0 0 0 1.5px var(--ink-3); }
+.ann-edited { margin-top: var(--space-2xs); }
+
+.ann-effect { margin: 0; padding: var(--space-sm) var(--space-md); background: var(--bench); border-radius: 2px; font-variant-numeric: tabular-nums; }
+.ann-effect[hidden] { display: none; }
+.ann-also { align-self: flex-start; white-space: normal; text-align: left; height: auto; min-height: 32px; }
+
+.ann-note { display: grid; gap: var(--space-2xs); }
+.ann-note-field { width: 100%; resize: vertical; min-height: 84px; font: inherit; }
+.ann-note-foot { display: flex; justify-content: space-between; gap: var(--space-sm); }
+.ann-error { margin: 0; color: var(--stamp); font-weight: 500; }
+.ann-error[hidden] { display: none; }
+
+.ann-foot { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm);
+  padding-top: var(--space-md); border-top: 1px solid var(--rule-soft); }
+.ann-actions { display: flex; gap: var(--space-xs); }
+
+.toast.has-action { pointer-events: auto; display: flex; align-items: center; gap: var(--space-md); }
+.toast .ann-undo { background: transparent; color: inherit; border: 0; box-shadow: inset 0 0 0 1px currentColor; font-weight: 600; }
+.toast .ann-undo:hover { background: color-mix(in oklab, currentColor 14%, transparent); }
+
+/* ------------------------------------------- heads and notes in a list */
+.ann-chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 2px;
+  background: var(--bench); box-shadow: inset 0 0 0 1px var(--rule); font-weight: 500; font-size: 14px; white-space: nowrap; }
+.ann-chip i, .ann-dot { width: 10px; height: 10px; border-radius: 2px; flex: none; display: inline-block; }
+.ann-leaf .ann-chip, .ann-review-row .ann-chip { justify-self: start; }
+.ann-own { font-weight: 400; color: var(--ink-3); font-size: 12px; }
+.ann-inherit { color: var(--ink-3); font-size: 14px; }
+.ann-mark { display: inline-flex; vertical-align: -2px; margin-left: 6px; color: var(--ink-3); }
+.ann-mark .ico svg, .ann-leaf-note .ico svg { width: 14px; height: 14px; }
+
+/* A report row that opens: the name is the control. */
+.ann-row-toggle { cursor: pointer; }
+.ann-toggle { all: unset; cursor: pointer; font-weight: inherit; border-radius: 2px; }
+.ann-toggle::after { content: ''; display: inline-block; width: 6px; height: 6px; margin-left: 8px; vertical-align: 3px;
+  border-right: 1.5px solid var(--ink-3); border-bottom: 1.5px solid var(--ink-3); transform: rotate(45deg);
+  transition: transform var(--dur-micro) var(--ease-out); }
+.ann-toggle[aria-expanded=true]::after { transform: rotate(-135deg); vertical-align: 0; }
+.ann-toggle:focus-visible, .ann-leaf:focus-visible, .ann-review-row:focus-visible, .ann-row-button:focus-visible {
+  outline: 2px solid var(--ink); outline-offset: 2px; }
+.lrow.is-open { background: var(--bench); }
+.ann-row-button { all: unset; box-sizing: border-box; width: 100%; cursor: pointer; }
+.ann-row-button.lrow { display: grid; }
+
+.ann-drill-wrap { padding: var(--space-xs) var(--space-md) var(--space-md) var(--space-lg); background: var(--bench);
+  border-top: 1px solid var(--rule-soft); }
+.ann-drill-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-xs) var(--space-md); padding: var(--space-xs) 0; }
+.ann-drill-note { color: var(--ink-2); max-width: 60ch; }
+.ann-drill { list-style: none; margin: 0; padding: 0; }
+.ann-drill li + li { border-top: 1px solid var(--rule-soft); }
+.ann-leaf { all: unset; box-sizing: border-box; width: 100%; cursor: pointer; display: grid; align-items: center;
+  grid-template-columns: 72px 96px minmax(120px, 1fr) 170px 110px minmax(0, 1.4fr); gap: var(--space-sm);
+  padding: 8px var(--space-2xs); border-radius: 2px; font-variant-numeric: tabular-nums; }
+.ann-leaf:hover { background: var(--panel); }
+.ann-leaf .num { text-align: right; }
+.ann-drill.is-one-entity .ann-leaf { grid-template-columns: 72px 96px 170px 110px minmax(0, 1fr); }
+.ann-drill.is-one-entity .ann-leaf-name { display: none; }
+.ann-leaf-note { color: var(--ink-2); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; gap: 6px; align-items: center; }
+
+/* Monthly: an entity's line opens to its cheques that month. */
+.mo-group li.ann-mo-item { align-items: center; }
+.mo-group li.ann-mo-item .ann-toggle { margin-right: auto; }
+.mo-group li.ann-mo-drill { display: block; padding: 0 0 var(--space-xs); }
+.mo-group li.ann-mo-drill .ann-leaf { grid-template-columns: 64px minmax(0, 1fr) auto; }
+.mo-group li.ann-mo-drill .ann-leaf > :nth-child(2), .mo-group li.ann-mo-drill .ann-leaf > :nth-child(3) { display: none; }
+.mo-group li.ann-mo-drill .ann-leaf-note { grid-column: 1 / -1; }
+
+/* ------------------------------------------------- the desk's review list */
+.ann-review-head .lede { max-width: 66ch; }
+.ann-period { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
+.ann-review { list-style: none; margin: 0; padding: 0; }
+.ann-review-item { display: grid; grid-template-columns: 28px minmax(0, 1fr); align-items: center; border-top: 1px solid var(--rule-soft); }
+.ann-review-item:first-child { border-top: 0; }
+.ann-review-item.is-picked { background: var(--bench); }
+.ann-review-item > input { justify-self: center; accent-color: var(--ink); width: 16px; height: 16px; }
+.ann-review-row { all: unset; box-sizing: border-box; cursor: pointer; display: grid; align-items: center;
+  grid-template-columns: 96px minmax(150px, 1.3fr) 110px 170px minmax(0, 1.4fr) 190px;
+  gap: var(--space-sm); padding: 10px var(--space-2xs); border-radius: 2px; }
+.ann-review-row:hover { background: var(--bench); }
+.ann-review-row .num { text-align: right; font-variant-numeric: tabular-nums; }
+.ann-review-when, .ann-review-name { display: grid; }
+.ann-review-note { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ann-by { text-align: right; }
+.ann-new { display: inline-block; margin-right: 6px; padding: 0 5px; border-radius: 2px; background: var(--act); color: var(--act-ink);
+  font: 600 11px/16px var(--data); text-transform: uppercase; letter-spacing: 0.04em; }
+
+.ann-bulk { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs) var(--space-md);
+  padding: var(--space-sm) var(--space-md); margin: calc(-1 * var(--space-2xs)) 0 var(--space-xs);
+  background: var(--panel); box-shadow: 0 6px 16px -10px color-mix(in oklab, var(--ink) 40%, transparent), inset 0 -1px 0 var(--rule-soft); }
+.ann-bulk-heads { display: flex; flex-wrap: wrap; gap: var(--space-2xs); }
+.ann-bulk-heads .btn { display: inline-flex; align-items: center; gap: 6px; }
+
+/* A long place name never runs under the top bar's buttons. */
+.topbar .place { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ------------------------------------------------------------- phones */
+@media (max-width: 700px) {
+  dialog.ann-panel { margin: auto 0 0; width: 100%; height: auto; max-height: 88dvh; border-radius: var(--r) var(--r) 0 0; }
+  @keyframes ann-in { from { transform: translateY(24px); opacity: 0.4; } }
+  .ann-form { max-height: 88dvh; padding: var(--space-md); }
+  .ann-foot { position: sticky; bottom: calc(-1 * var(--space-md)); background: var(--panel); padding-bottom: var(--space-md); }
+  .ann-leaf, .ann-drill.is-one-entity .ann-leaf { grid-template-columns: 64px minmax(0, 1fr) auto; row-gap: 2px; }
+  .ann-leaf > :nth-child(2) { display: none; }
+  .ann-leaf > :nth-child(4) { grid-column: 2; justify-self: start; }
+  .ann-leaf-note { grid-column: 1 / -1; }
+  .ann-drill-wrap { padding-left: var(--space-sm); padding-right: var(--space-sm); }
+  .ann-review-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: 4px; }
+  .ann-review-row > .ann-review-when { grid-column: 1 / -1; display: flex; gap: var(--space-sm); }
+  .ann-review-note, .ann-by { grid-column: 1 / -1; text-align: left; }
+}
+.mo-group li.ann-mo-drill .ann-own { display: none; }

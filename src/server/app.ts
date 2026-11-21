@@ -1323,12 +1323,12 @@ export function createApp(
 
   const REPORT_CSV: Record<string, string[]> = {
     entities: [
-      'Entity', 'Prints as', 'Kind', 'Head', 'Cheques', 'Total (INR)', 'Share %',
+      'Entity', 'Prints as', 'Kind', 'Category', 'Cheques', 'Total (INR)', 'Share %',
       'Average (INR)', 'Largest (INR)', 'Previous period (INR)', 'Last paid'
     ],
-    categories: ['Head', 'Entities', 'Cheques', 'Total (INR)', 'Share %', 'Previous period (INR)'],
+    categories: ['Category', 'Entities', 'Cheques', 'Total (INR)', 'Share %', 'Previous period (INR)'],
     payees: ['Payee (as printed)', 'Entities', 'Cheques', 'Total (INR)', 'Share %'],
-    cheques: ['Cheque no', 'Cheque date', 'Payee', 'Entity', 'Head', 'Amount (INR)', 'Memo', 'Status']
+    cheques: ['Cheque no', 'Cheque date', 'Payee', 'Entity', 'Category', 'Amount (INR)', 'Memo', 'Status']
   }
 
   function csvResponse(text: string, filename: string): Response {
