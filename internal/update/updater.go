@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -323,6 +324,10 @@ func (u *Updater) Swap() error {
 	}
 	cmd := exec.Command("/bin/sh", "-c", swapScript,
 		"banyan-update", strconv.Itoa(os.Getpid()), staged, u.Bundle, u.PreviousPath())
+	// A session of its own. When an app macOS launched exits, launchd kills
+	// what is left in its process group; in the app's group the helper died
+	// between moving the new app in and opening it.
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	if err := cmd.Start(); err != nil {
 		u.set(func(s *State) { s.Status, s.Error = StatusError, "The new app couldn't be swapped in: "+err.Error() })
 		return err
@@ -338,15 +343,18 @@ while kill -0 "$pid" 2>/dev/null; do
   i=$((i + 1)); [ "$i" -gt 600 ] && exit 1
   sleep 0.1
 done
+reopen() {
+  # LaunchServices can take a moment to let go of the app that just quit.
+  open "$bundle" || { sleep 1; open "$bundle"; }
+}
 rm -rf "$previous"
 if ! mv "$bundle" "$previous"; then
-  rm -rf "$staged"; open "$bundle"; exit 1
+  rm -rf "$staged"; reopen; exit 1
 fi
 if mv "$staged" "$bundle"; then
-  xattr -dr com.apple.quarantine "$bundle" 2>/dev/null
-  open "$bundle"
+  reopen
 else
-  mv "$previous" "$bundle"; open "$bundle"; exit 1
+  mv "$previous" "$bundle"; reopen; exit 1
 fi
 `
 
