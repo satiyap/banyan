@@ -12,9 +12,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -35,6 +37,7 @@ var version = "0.0.0-dev"
 func isDev() bool { return strings.HasSuffix(version, "-dev") }
 
 func main() {
+	useContainerTemp()
 	paths, err := preparePaths()
 	if err != nil {
 		log.Fatal(err)
@@ -294,6 +297,11 @@ func (t *titleBar) watchSync(d *desk.App) {
 // unless BANYAN_UPDATE_URL points it at a manifest to test against
 // (with BANYAN_UPDATE_KEY, the public key that manifest is signed with).
 func newUpdater(p paths) *update.Updater {
+	// The App Store delivers the App Store build's updates; an app from the
+	// store never downloads or installs its own.
+	if appStore {
+		return nil
+	}
 	manifest, key := update.ManifestURL, update.PublicKey()
 	if isDev() {
 		manifest = os.Getenv("BANYAN_UPDATE_URL")
@@ -351,6 +359,21 @@ func flush(d *desk.App, limit time.Duration) {
 func relaunch() {
 	exe, err := os.Executable()
 	if err != nil {
+		return
+	}
+	if appStore {
+		// In the sandbox the app is opened again through LaunchServices, by a
+		// helper in a session of its own: launchd ends the app's process
+		// group when it quits.
+		bundle := update.BundleOf(exe)
+		if bundle == "" {
+			return
+		}
+		cmd := exec.Command("/bin/sh", "-c",
+			`while kill -0 "$0" 2>/dev/null; do sleep 0.1; done; open "$1" || { sleep 1; open "$1"; }`,
+			strconv.Itoa(os.Getpid()), bundle)
+		cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+		_ = cmd.Start()
 		return
 	}
 	_ = exec.Command("/bin/sh", "-c", `sleep 1; exec "$0"`, exe).Start()

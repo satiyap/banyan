@@ -239,7 +239,19 @@ A failing replay means behaviour changed. If the change is intended, update the 
 
 `pnpm release 2.1.0` sets the version in `package.json`, tags `v2.1.0` and pushes, and the tag builds and publishes the release. The workflow refuses a tag that doesn't match `package.json`. The latest disk image is always at `releases/latest/download/Banyan-mac-arm64.dmg`.
 
-### How auto-update works
+### Two builds: direct download and Mac App Store
+
+The same code makes two apps. `sh scripts/build-mac.sh` is the direct download: signed with a Developer ID, notarized, and updated by its own signed updater (below). `STORE=mas sh scripts/build-mac.sh` is the Mac App Store build, built with the `mas` tag into `dist/appstore/`:
+
+- **Sandboxed** (`build/appstore/entitlements.plist`): printing, the network, and Downloads. It prints through the same `lp` and `lpstat` calls as the direct build, which work inside the sandbox with the print entitlement.
+- **No updater of its own.** The App Store updates it. Settings shows no Updates row and the menu has no Check for Updates.
+- **Bundle ID `com.banyan.desk`**, registered to the team. The direct download is moving to it from `com.banyanrwa.chequedesk` in two releases: 2.5.0 keeps the old ID but its updater accepts both, so 2.5.1, which carries the new ID, arrives as an ordinary update. A desk still on 2.4.0 or earlier must reach 2.5.0 before 2.5.1 is published, or download 2.5.1 by hand. macOS asks for local-network access once more after the switch, since permissions belong to the ID.
+- **One register per Mac.** On its first launch macOS moves `~/Library/Application Support/Banyan` into the app's container, `~/Library/Containers/com.banyan.desk` (`container-migration.plist`). The direct download looks there first and keeps using that register if it finds one, so a Mac that switches builds never ends up with two registers.
+- **Released from the same tag.** The `appstore` job in `release.yml` builds, signs and uploads `Banyan.pkg` to App Store Connect, where it goes to TestFlight and is submitted for review by hand. It skips itself until its secrets are set (listed in the job), and it never holds up the direct release.
+
+Never launch an App Store build with the real bundle ID on a Mac whose register matters before the direct build that follows the container is installed there: the move happens on first launch.
+
+
 
 Every tagged release also publishes `update.json` beside the disk image: the version, the image's address on the release page, its size and SHA-256, and the release's section of `CHANGELOG.md`. The whole manifest is signed with an Ed25519 key. The private half is the `UPDATE_SIGNING_KEY` secret and nothing else holds it. The public half is compiled into the app (`internal/update/key.go`). A tagged release fails without the secret, because a release with no manifest would leave every installed app behind.
 

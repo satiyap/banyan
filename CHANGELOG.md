@@ -2,6 +2,11 @@
 
 What each release of the Banyan desktop app does. The full history is in the git log.
 
+## 2.5.0 — 2026-11-21
+
+- Ready for the Mac App Store: one register on a Mac, whichever build it runs.
+- Updates can move Banyan to its new app identifier without a manual download.
+
 ## 2.4.0 — 2026-11-21
 
 - Change a category or note from inside the Year and Monthly reports: open an entity, a category or a month's line, then any cheque.

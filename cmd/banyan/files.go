@@ -223,7 +223,8 @@ func saveToDownloads(name string, body []byte) (string, error) {
 	// BANYAN_DOWNLOADS_DIR is for tests: files go there and Finder is left alone.
 	dir := os.Getenv("BANYAN_DOWNLOADS_DIR")
 	if dir == "" {
-		home, err := os.UserHomeDir()
+		// The real Downloads, not the sandbox container's.
+		home, err := realHome()
 		if err != nil {
 			return "", err
 		}

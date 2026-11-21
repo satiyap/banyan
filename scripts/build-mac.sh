@@ -4,12 +4,28 @@
 #   sh scripts/build-mac.sh                    a development build, ad-hoc signed
 #   VERSION=2.0.0 SIGN_IDENTITY=<id> sh ...    a release build, signed for notarization
 #
+# The Mac App Store build, from the same code, into dist/appstore/:
+#   STORE=mas sh scripts/build-mac.sh          sandboxed, ad-hoc signed, to try locally
+#   STORE=mas VERSION=2.5.0 TEAM_ID=<team> MAS_SIGN_IDENTITY=<Apple Distribution id> \
+#     PROVISION_PROFILE=<path> INSTALLER_IDENTITY=<Mac Installer Distribution id> sh ...
+#                                              signed for the store, with Banyan.pkg to upload
+# The store build is sandboxed, has no updater of its own (the App Store updates
+# it), and moves the direct download's data folder into its container once.
+#
 # A version ending in -dev keeps its own data folder and never prints.
 set -eu
 cd "$(dirname "$0")/.."
 
 VERSION="${VERSION:-2.1.0-dev}"
+STORE="${STORE:-direct}"
+TAGS="production"
 OUT="dist"
+if [ "$STORE" = mas ]; then
+  TAGS="production,mas"
+  OUT="dist/appstore"
+elif [ "$STORE" != direct ]; then
+  echo "STORE is direct or mas" >&2; exit 1
+fi
 APP="$OUT/Banyan.app"
 
 # An unrelated go.work may sit in a parent folder.
@@ -22,7 +38,7 @@ export CGO_LDFLAGS="-mmacosx-version-min=12.0"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
-go build -tags production -trimpath -buildvcs=false -ldflags="-w -s -X main.version=${VERSION}" \
+go build -tags "$TAGS" -trimpath -buildvcs=false -ldflags="-w -s -X main.version=${VERSION}" \
   -o "$APP/Contents/MacOS/Banyan" ./cmd/banyan
 
 # The icon, from the same drawing the Electron build used.
@@ -61,7 +77,27 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-if [ -n "${SIGN_IDENTITY:-}" ]; then
+if [ "$STORE" = mas ]; then
+  # What the store needs on top of the shared Info.plist: no export-compliance
+  # question (HTTPS only), and the one-time move of the data folder.
+  # Its own identifier: the direct download's is tied to its updater.
+  /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.banyan.desk" \
+    -c "Add :ITSAppUsesNonExemptEncryption bool false" "$APP/Contents/Info.plist"
+  cp build/appstore/container-migration.plist "$APP/Contents/Resources/container-migration.plist"
+  ENTITLEMENTS="$(mktemp -d)/entitlements.plist"
+  cp build/appstore/entitlements.plist "$ENTITLEMENTS"
+  if [ -n "${TEAM_ID:-}" ]; then
+    /usr/libexec/PlistBuddy -c "Add :com.apple.application-identifier string ${TEAM_ID}.com.banyan.desk" \
+      -c "Add :com.apple.developer.team-identifier string ${TEAM_ID}" "$ENTITLEMENTS"
+  fi
+  if [ -n "${PROVISION_PROFILE:-}" ]; then
+    cp "$PROVISION_PROFILE" "$APP/Contents/embedded.provisionprofile"
+  fi
+  codesign --force --sign "${MAS_SIGN_IDENTITY:--}" --entitlements "$ENTITLEMENTS" "$APP"
+  if [ -n "${INSTALLER_IDENTITY:-}" ]; then
+    productbuild --component "$APP" /Applications --sign "$INSTALLER_IDENTITY" "$OUT/Banyan.pkg"
+  fi
+elif [ -n "${SIGN_IDENTITY:-}" ]; then
   codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$APP"
 else
   codesign --force --sign - "$APP" >/dev/null 2>&1

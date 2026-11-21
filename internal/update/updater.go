@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -31,9 +32,11 @@ const (
 	StatusError       = "error"       // the last step failed; Error says why
 )
 
-// BundleID is the identifier every release carries. A disk image holding
-// anything else is not installed.
-const BundleID = "com.banyanrwa.chequedesk"
+// BundleIDs are the identifiers a release may carry. A disk image holding
+// anything else is not installed. The direct download is moving from the
+// first to the second, the one the App Store build has; a desk accepts both
+// so the move arrives as an ordinary update.
+var BundleIDs = []string{"com.banyanrwa.chequedesk", "com.banyan.desk"}
 
 // State is what Settings is told.
 type State struct {
@@ -291,7 +294,7 @@ func checkBundle(app, version string) error {
 		out, _ := exec.Command("/usr/libexec/PlistBuddy", "-c", "Print :"+key, plist).Output()
 		return strings.TrimSpace(string(out))
 	}
-	if id := read("CFBundleIdentifier"); id != BundleID {
+	if id := read("CFBundleIdentifier"); !slices.Contains(BundleIDs, id) {
 		return fmt.Errorf("The disk image holds %q, not Banyan.", id)
 	}
 	if v := read("CFBundleShortVersionString"); v != version {

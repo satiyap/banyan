@@ -37,6 +37,15 @@ func preparePaths() (paths, error) {
 			name = "Banyan Dev"
 		}
 		data = filepath.Join(base, name)
+		// The direct download, on a Mac where the App Store build has already
+		// taken the register into its container, keeps using that one.
+		if !appStore && !isDev() {
+			if shared := containerData(); shared != "" {
+				if _, err := os.Stat(filepath.Join(shared, "banyan.db")); err == nil {
+					data = shared
+				}
+			}
+		}
 	}
 	p := paths{
 		data:        data,

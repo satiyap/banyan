@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- On the App Store build's first launch, macOS moves the data folder the
+     direct download used into the sandbox's container: the register, the
+     calibration, the server connection and the rendered PDFs. The direct
+     download follows it there (cmd/banyan/paths.go), so a Mac keeps one
+     register whichever build it runs. -->
+<plist version="1.0">
+<dict>
+  <key>Move</key>
+  <array>
+    <string>${ApplicationSupport}/Banyan</string>
+  </array>
+</dict>
+</plist>

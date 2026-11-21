@@ -26,10 +26,13 @@ func setupMenu(app *application.App, window *application.WebviewWindow, p paths)
 		window.Show().Focus()
 		window.SetURL("/setup")
 	})
-	appMenu.Add("Check for Updates…").OnClick(func(*application.Context) {
-		window.Show().Focus()
-		window.SetURL("/setup#updates")
-	})
+	// The App Store build is updated by the App Store.
+	if !appStore {
+		appMenu.Add("Check for Updates…").OnClick(func(*application.Context) {
+			window.Show().Focus()
+			window.SetURL("/setup#updates")
+		})
+	}
 	appMenu.AddSeparator()
 	appMenu.AddRole(application.ServicesMenu)
 	appMenu.AddSeparator()
