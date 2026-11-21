@@ -222,9 +222,11 @@ jobs:
           security list-keychains -d user -s "$kc" $(security list-keychains -d user | tr -d '"')
           rm "$RUNNER_TEMP/app.p12" "$RUNNER_TEMP/installer.p12"
           echo "$PROFILE" | base64 --decode > "$RUNNER_TEMP/banyan.provisionprofile"
-          app="$(security find-identity -v -p codesigning "$kc" | sed -n 's/.*"\(Apple Distribution: .*\)"/\1/p' | head -1)"
-          installer="$(security find-identity -v "$kc" | sed -n 's/.*"\(3rd Party Mac Developer Installer: .*\|Mac Installer Distribution: .*\)"/\1/p' | head -1)"
-          test -n "$app" && test -n "$installer"
+          # grep -E, not sed: macOS's sed has no alternation in a basic pattern.
+          app="$(security find-identity -v -p codesigning "$kc" | grep -oE '"Apple Distribution: [^"]+"' | head -1 | tr -d '"')"
+          installer="$(security find-identity -v "$kc" | grep -oE '"(3rd Party Mac Developer Installer|Mac Installer Distribution): [^"]+"' | head -1 | tr -d '"')"
+          test -n "$app" || { echo "::error::No Apple Distribution identity in MAS_CERT_P12_BASE64"; exit 1; }
+          test -n "$installer" || { echo "::error::No Mac Installer Distribution identity in MAS_INSTALLER_P12_BASE64"; exit 1; }
           echo "app=$app" >> "$GITHUB_OUTPUT"
           echo "installer=$installer" >> "$GITHUB_OUTPUT"
       - name: Build for the store
