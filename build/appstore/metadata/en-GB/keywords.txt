@@ -1,1 +1,1 @@
-printer,writer,register,ledger,housing society,association,treasurer,accounts,payments,lakh,crore
+finance,payments,expenses,cheque,register,housing society,association,treasurer,accounts,lakh
