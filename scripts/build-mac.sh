@@ -93,6 +93,9 @@ if [ "$STORE" = mas ]; then
   if [ -n "${PROVISION_PROFILE:-}" ]; then
     cp "$PROVISION_PROFILE" "$APP/Contents/embedded.provisionprofile"
   fi
+  # App Store Connect rejects any file carrying extended attributes such as
+  # com.apple.quarantine (error 91109); a profile downloaded in a browser has it.
+  xattr -cr "$APP"
   codesign --force --sign "${MAS_SIGN_IDENTITY:--}" --entitlements "$ENTITLEMENTS" "$APP"
   if [ -n "${INSTALLER_IDENTITY:-}" ]; then
     productbuild --component "$APP" /Applications --sign "$INSTALLER_IDENTITY" "$OUT/Banyan.pkg"
