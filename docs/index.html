@@ -134,53 +134,46 @@
       <li>
         <div class="when"><h3>2.2.1</h3><time datetime="2026-11-21">21 Nov 2026</time></div>
         <ul>
-          <li>Signed with an Apple Developer ID and notarized by Apple: Banyan opens without the “Apple could not verify” warning.</li>
-          <li>The first release that 2.2.0 installs for itself, from Settings.</li>
+          <li>Signed and notarized releases.</li>
         </ul>
       </li>
       <li>
         <div class="when"><h3>2.2.0</h3><time datetime="2026-11-21">21 Nov 2026</time></div>
         <ul>
-          <li>Banyan updates itself: it checks for a new version, says so in the title bar, and installs when you click Install and restart in Settings.</li>
-          <li>Nothing installs on its own, so an update never interrupts a cheque. Your register and calibration are kept.</li>
-          <li>Each update is checked against the release’s signature before anything changes.</li>
-          <li>The last version you need to download by hand.</li>
+          <li>Updates itself: Settings ▸ Updates ▸ Install and restart.</li>
+          <li>Updates are verified before they install.</li>
         </ul>
       </li>
       <li>
         <div class="when"><h3>2.1.1</h3><time datetime="2026-11-21">21 Nov 2026</time></div>
         <ul>
-          <li>Keys say what they’re for: <code>W-</code> for the cheque desk, <code>R-</code> for reports only. A key offered for the wrong role isn’t used up.</li>
-          <li>Before a key is spent, the app says what it will do, and asks before replacing this Mac’s register.</li>
-          <li>A register replaced by a read key is set aside as a file, never deleted, and can be brought back from Settings.</li>
-          <li>Taking the server’s register keeps track of the leaves this Mac already used, so none is offered twice.</li>
-          <li>A desk can no longer overwrite a server register it didn’t start from.</li>
-          <li>Reports-only apps and the first-launch screen no longer ask for local-network access.</li>
+          <li>Keys show their role: W- desk, R- reports only.</li>
+          <li>The app says what a key will do before using it.</li>
+          <li>A desk can't overwrite a different server register.</li>
+          <li>Read-only apps no longer ask for local-network access.</li>
         </ul>
       </li>
       <li>
         <div class="when"><h3>2.1.0</h3><time datetime="2026-11-19">19 Nov 2026</time></div>
         <ul>
-          <li>Settings shows whether Banyan may use the local network, and opens System Settings when it can’t.</li>
-          <li>A refused permission shows the printer as “can’t check”, not “offline”, and printing carries on.</li>
-          <li>This page says whether Banyan runs on your computer.</li>
+          <li>Settings ▸ Permissions shows local-network access.</li>
+          <li>Printing works when local-network access is refused.</li>
         </ul>
       </li>
       <li>
         <div class="when"><h3>2.0.0</h3><time datetime="2026-11-13">13 Nov 2026</time></div>
         <ul>
-          <li>Rewritten in Go on Wails 3: the download drops from about 120&nbsp;MB to about 7&nbsp;MB.</li>
-          <li>Cheques render with macOS’s own WebKit. Pages, layout, calibration and register are unchanged.</li>
-          <li>The Banyan server is rewritten in Go.</li>
+          <li>Rewritten in Go: 7 MB instead of 120 MB.</li>
+          <li>The Banyan server rewritten in Go.</li>
         </ul>
       </li>
       <li>
         <div class="when"><h3>0.1.0</h3><time datetime="2026-11-13">13 Nov 2026</time></div>
         <ul>
-          <li>Write, print and log cheques onto a real bank leaf from one Mac.</li>
-          <li>A register of every leaf by cheque book, where nothing is deleted.</li>
-          <li>Payment rhythm, year and monthly reports, PDF and CSV exports.</li>
-          <li>Optional server: sync after every change, and read-only reports for members.</li>
+          <li>Write, print and log cheques on bank leaves.</li>
+          <li>Register by cheque book; nothing is deleted.</li>
+          <li>Payment rhythm, yearly and monthly reports, PDF and CSV export.</li>
+          <li>Optional server sync and read-only member reports.</li>
         </ul>
       </li>
     </ol>
