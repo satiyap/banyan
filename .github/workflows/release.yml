@@ -207,6 +207,15 @@ jobs:
           security unlock-keychain -p "$kcpass" "$kc"
           echo "$CERT" | base64 --decode > "$RUNNER_TEMP/app.p12"
           echo "$INSTALLER" | base64 --decode > "$RUNNER_TEMP/installer.p12"
+          # A .p12 is DER: it starts with a SEQUENCE byte. Anything else means
+          # the secret holds something other than the certificate (a password
+          # pasted into the wrong secret, say), and saying which saves a guess.
+          for f in app:MAS_CERT_P12_BASE64 installer:MAS_INSTALLER_P12_BASE64; do
+            file="$RUNNER_TEMP/${f%%:*}.p12"
+            if [ "$(head -c1 "$file" | od -An -tx1 | tr -d ' ')" != 30 ] || [ "$(wc -c < "$file")" -lt 1000 ]; then
+              echo "::error::${f##*:} does not hold a base64 .p12 ($(wc -c < "$file") bytes once decoded)"; exit 1
+            fi
+          done
           security import "$RUNNER_TEMP/app.p12" -k "$kc" -P "$CERT_PASSWORD" -T /usr/bin/codesign
           security import "$RUNNER_TEMP/installer.p12" -k "$kc" -P "$INSTALLER_PASSWORD" -T /usr/bin/productbuild
           security set-key-partition-list -S apple-tool:,apple: -s -k "$kcpass" "$kc" >/dev/null
