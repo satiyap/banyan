@@ -1,6 +1,8 @@
-# Every push and pull request: typecheck, the unit tests (the desk against its
-# recorded answers, the Banyan server, desk-to-server sync), then the real app
-# against a real local server. Nothing here prints: the app refuses to in tests.
+# Every push and pull request: the Go desktop app's tests on macOS (the desk
+# against its recorded answers, sync, printing, rendering), the Banyan server
+# on Linux, and the TypeScript reference's typecheck and unit tests. The
+# Electron app is frozen: its end-to-end run is no longer part of CI. Nothing
+# here prints: the app refuses to in tests.
 name: CI
 
 # Docs, licence text and the other workflows do not run it. A newer push to
@@ -35,13 +37,21 @@ jobs:
         run: pnpm typecheck
       - name: Unit tests
         run: pnpm test
-      - name: The app, end to end
-        run: pnpm e2e
-      - uses: actions/upload-artifact@v4
-        if: failure()
+
+  # The desktop app (Go on Wails 3) renders with the Mac's own WebKit, so it is tested on macOS.
+  desk:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          name: test-results
-          path: test-results
+          go-version-file: go.mod
+      - name: Vet
+        run: GOWORK=off go vet ./...
+      - name: Test
+        run: GOWORK=off go test ./...
+      - name: Build
+        run: sh scripts/build-mac.sh
 
   # The Banyan server is a Go program that runs on Linux, so it is tested there:
   # keys, the register's revisions, members' reports, and a desk syncing with it.

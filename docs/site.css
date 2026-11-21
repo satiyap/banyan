@@ -53,6 +53,8 @@ strong { font-weight: 500; color: var(--color-ink); }
 .brand img { width: 28px; height: 32px; }
 .top nav { margin-left: auto; display: flex; align-items: center; gap: var(--space-xl); font-size: var(--text-sm); font-weight: 500; }
 .top nav a:not(.btn) { text-decoration: none; color: var(--color-ink-2); }
+.top nav a.src { display: inline-flex; align-items: center; gap: 0.4em; }
+.top nav a.src svg { flex: none; }
 .top nav a:not(.btn):hover { color: var(--color-ink); text-decoration: underline; text-decoration-color: var(--color-accent); }
 
 /* Printed controls: an ink border, a second rule inset, crop marks that open on hover. */
@@ -111,6 +113,20 @@ dl.set > div { margin: 0; }
 .steps { counter-reset: step; }
 .steps > li { counter-increment: step; grid-template-columns: 3rem minmax(0, 4fr) minmax(0, 7fr); gap: var(--space-lg); }
 .steps > li::before { content: counter(step); font-family: var(--font-display); font-size: var(--text-xl); line-height: 1.2; color: var(--color-ink); font-variant-numeric: tabular-nums; }
+/* The changelog as a timeline: a hairline down the left, a crop-marked node per release. */
+.timeline { --rail: 1.75rem; margin: var(--space-2xl) 0 0; padding: 0; list-style: none; border-top: var(--rule-hair) solid var(--color-ink); }
+.timeline > li { position: relative; display: grid; grid-template-columns: var(--rail) minmax(0, 4fr) minmax(0, 8fr); gap: var(--space-lg); padding-block: var(--space-lg); border-bottom: var(--rule-hair) solid var(--color-rule); }
+.timeline > li::before { content: ""; position: absolute; left: calc(var(--rail) / 2 - 0.5px); top: 0; bottom: 0; width: 1px; background: var(--color-rule); }
+.timeline > li:first-child::before { top: calc(var(--space-lg) + 0.85em); }
+.timeline > li:last-child::before { bottom: calc(100% - var(--space-lg) - 0.85em); }
+.timeline > li::after { content: ""; position: absolute; left: calc(var(--rail) / 2 - 5px); top: calc(var(--space-lg) + 0.85em - 5px); width: 10px; height: 10px; background: var(--color-paper-hi); border: var(--rule-hair) solid var(--color-ink); box-shadow: 0 0 0 3px var(--color-paper-2); }
+.timeline > li:first-child::after { background: var(--color-accent); border-color: var(--color-accent); }
+.timeline .when { grid-column: 2; display: flex; align-items: baseline; gap: var(--space-md); }
+.timeline h3 { font-family: var(--font-display); font-size: var(--text-xl); letter-spacing: -0.005em; line-height: 1.2; color: var(--color-ink); font-variant-numeric: tabular-nums; }
+.timeline time { font-size: var(--text-sm); color: var(--color-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.timeline ul { grid-column: 3; margin: 0; padding-left: 1.1em; list-style: disc; max-width: 60ch; display: grid; gap: var(--space-2xs); }
+.timeline ul li::marker { color: var(--color-muted); }
+
 .note { margin-top: var(--space-xl); max-width: 62ch; font-size: var(--text-sm); color: var(--color-muted); }
 
 /* The one ink band, and the footer on the same ground. */
@@ -137,6 +153,8 @@ footer p { margin-left: auto; }
   .split { gap: var(--space-lg); }
   .steps > li { grid-template-columns: 2.5rem minmax(0, 1fr); }
   .steps > li p { grid-column: 2; }
+  .timeline > li { grid-template-columns: var(--rail) minmax(0, 1fr); gap: var(--space-sm) var(--space-md); }
+  .timeline .when, .timeline ul { grid-column: 2; }
   .feature.flip .copy { order: 0; }
   .feature, .set > * { gap: var(--space-md); }
   .feature { padding-block: var(--space-xl); gap: var(--space-xl); }

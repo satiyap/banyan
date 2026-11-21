@@ -18,7 +18,8 @@
       <a href="#does">What it does</a>
       <a href="#reports">Reports</a>
       <a href="#start">Get started</a>
-      <a href="https://github.com/satiyap/banyan">GitHub</a>
+      <a href="#changes">Changelog</a>
+      <a class="src" href="https://github.com/satiyap/banyan" aria-label="Source on GitHub"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>Source</a>
       <a class="btn crop js-dl" href="https://github.com/satiyap/banyan/releases/latest/download/Banyan-mac-arm64.dmg">Download</a>
     </nav>
   </div>
@@ -38,7 +39,7 @@
           </a>
           <p class="platform" id="platform" aria-live="polite">Needs a Mac with Apple silicon (M1 or later).</p>
         </div>
-        <a class="btn crop" href="https://github.com/satiyap/banyan">View the source</a>
+        <a class="btn crop" href="https://github.com/satiyap/banyan"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>View the source</a>
       </div>
     </div>
     <figure class="shot crop">
@@ -84,7 +85,7 @@
     <dl class="set">
       <div><dt>No server</dt><dd>Everything runs on one Mac, beside the printer.</dd></div>
       <div><dt>No account</dt><dd>Nothing to sign up for, and no password to keep.</dd></div>
-      <div><dt>Works offline</dt><dd>The register is one file on your Mac. Nothing is sent anywhere.</dd></div>
+      <div><dt>Works offline</dt><dd>The register is one file on your Mac. Nothing is sent anywhere unless you connect a server.</dd></div>
     </dl>
   </div>
 </section>
@@ -96,6 +97,20 @@
       <p class="lead">By expense head, quarter and payee, with a monthly PDF and CSV exports.</p>
     </div>
     <figure class="shot crop wide"><img loading="lazy" src="assets/img/year.webp" width="1700" height="1062" alt="The Year report: total paid in the financial year, a breakdown by expense head, month-by-month bars grouped by quarter, and a list of who was paid."></figure>
+  </div>
+</section>
+
+<section id="sharing" class="band">
+  <div class="container">
+    <div class="split">
+      <h2 class="head">Share the reports, if you want to.</h2>
+      <p class="lead">Connect the desk to a Banyan server, and members read the year and monthly reports in a browser.</p>
+    </div>
+    <dl class="set">
+      <div><dt>Read-only for members</dt><dd>Each member signs in with a key you give them. They see reports, never the register, and can’t write a cheque.</dd></div>
+      <div><dt>Kept in step</dt><dd>The desk sends the register to the server after every change, so another Mac can pick up from it.</dd></div>
+      <div><dt>Optional</dt><dd>Skip it and the desk works on its own. You can connect later in Settings.</dd></div>
+    </dl>
   </div>
 </section>
 
@@ -112,6 +127,51 @@
   </div>
 </section>
 
+<section id="changes" class="band">
+  <div class="container">
+    <h2 class="head">Changelog</h2>
+    <ol class="timeline">
+      <li>
+        <div class="when"><h3>2.1.1</h3><time datetime="2026-11-21">21 Nov 2026</time></div>
+        <ul>
+          <li>Keys say what they’re for: <code>W-</code> for the cheque desk, <code>R-</code> for reports only. A key offered for the wrong role isn’t used up.</li>
+          <li>Before a key is spent, the app says what it will do, and asks before replacing this Mac’s register.</li>
+          <li>A register replaced by a read key is set aside as a file, never deleted, and can be brought back from Settings.</li>
+          <li>Taking the server’s register keeps track of the leaves this Mac already used, so none is offered twice.</li>
+          <li>A desk can no longer overwrite a server register it didn’t start from.</li>
+          <li>Reports-only apps and the first-launch screen no longer ask for local-network access.</li>
+        </ul>
+      </li>
+      <li>
+        <div class="when"><h3>2.1.0</h3><time datetime="2026-11-19">19 Nov 2026</time></div>
+        <ul>
+          <li>Settings shows whether Banyan may use the local network, and opens System Settings when it can’t.</li>
+          <li>A refused permission shows the printer as “can’t check”, not “offline”, and printing carries on.</li>
+          <li>This page says whether Banyan runs on your computer.</li>
+        </ul>
+      </li>
+      <li>
+        <div class="when"><h3>2.0.0</h3><time datetime="2026-11-13">13 Nov 2026</time></div>
+        <ul>
+          <li>Rewritten in Go on Wails 3: the download drops from about 120&nbsp;MB to about 7&nbsp;MB.</li>
+          <li>Cheques render with macOS’s own WebKit. Pages, layout, calibration and register are unchanged.</li>
+          <li>The Banyan server is rewritten in Go.</li>
+        </ul>
+      </li>
+      <li>
+        <div class="when"><h3>0.1.0</h3><time datetime="2026-11-13">13 Nov 2026</time></div>
+        <ul>
+          <li>Write, print and log cheques onto a real bank leaf from one Mac.</li>
+          <li>A register of every leaf by cheque book, where nothing is deleted.</li>
+          <li>Payment rhythm, year and monthly reports, PDF and CSV exports.</li>
+          <li>Optional server: sync after every change, and read-only reports for members.</li>
+        </ul>
+      </li>
+    </ol>
+    <p class="note"><a href="https://github.com/satiyap/banyan/blob/main/CHANGELOG.md">The changelog on GitHub</a> has the same list; the git history has everything.</p>
+  </div>
+</section>
+
 <section class="close">
   <div class="container">
     <div>
@@ -119,8 +179,8 @@
       <p class="fine">For Apple silicon Macs. Not yet signed with an Apple Developer ID, so macOS asks you to allow it once. Free under Apache 2.0.</p>
     </div>
     <div class="actions">
-      <a class="btn primary crop js-dl" href="https://github.com/satiyap/banyan/releases/latest/download/Banyan-mac-arm64.dmg">Download for Mac</a>
-      <a class="btn crop" href="https://github.com/satiyap/banyan">Open the repository</a>
+      <a class="btn primary crop js-dl" href="https://github.com/satiyap/banyan/releases/latest/download/Banyan-mac-arm64.dmg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7 11 5 5 5-5"/><path d="M5 20h14"/></svg>Download for Mac</a>
+      <a class="btn crop" href="https://github.com/satiyap/banyan"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>Open the repository</a>
     </div>
   </div>
 </section>

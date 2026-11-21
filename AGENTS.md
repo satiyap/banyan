@@ -40,7 +40,7 @@ Three processes: the Electron main process (window, menus, and the Chromium that
 - `scripts/verify-print.test.ts` — renders through the real composition code and measures where the ink lands, then checks it against the calibration. Run `pnpm verify-print` after any change to the renderer, the shared layout module, the print CSS or the template.
 - `scripts/render-check.cjs` — renders one invented cheque with the app's Chromium and with an installed Chrome and reports both page sizes. Run `pnpm render-check` after upgrading Electron.
 - `tests/golden/` — the recordings: what the desk's rules answered on invented inputs, as JSON, plus two invented registers. The tests replay them. Nothing regenerates them; a recorded case is edited by hand, with the change that requires it.
-- `e2e/app.spec.ts` — opens the real app against a throwaway data folder. It never prints.
+- `e2e/app.spec.ts` — opens the Electron app against a throwaway data folder. It never prints. The Electron app is frozen, and this test is no longer run in CI: the Go app is tested with `go test ./...`.
 - `build/icon.svg` — the app icon: the existing Banyan mark on the macOS icon shape.
 
 **Where the data lives.** The register is `~/Library/Application Support/Banyan/banyan.db`, beside the calibration copy and rendered PDFs. It is financial data: never seed, reset, or bulk-edit it as a shortcut, and never commit a register to this repository (`data/` and `*.db` sidecars are git-ignored). There is deliberately no demo data. The preview backdrop `static/leaf-photo.jpg` ships with the app and is committed. It is a photograph of a real leaf with the account number, account name and MICR band blacked out, the anti-copy (pantograph) patch blurred and the resolution halved to about 127 dpi, and a test pins its hash: never replace it with an unredacted or sharper photograph, and never commit the original. A copy in the data folder's `static/` is served in preference to the shipped one.
@@ -267,14 +267,16 @@ The server and the desk's sync with it are built and tested; nothing is deployed
 - Pages: `static/setup.html` (the desk's connection screen), `static/login.html` and `static/reader.html` (the members' sign-in and reports). The members' pages load the desk's own `year.js` and `monthly.js` unchanged.
 - The server reads reports through the desk's own app (`createApp`) pointed at the latest register, behind a short allow-list (`READER_API`). Widening that list exposes more of the register to members: do not do it without being asked.
 - The server must never gain a route that writes a cheque or prints, and never hand the register file to anything but a write token.
-- Whenever the desk and the server disagree about which register is newer, the code must stop and ask. Never resolve it automatically in either direction.
-- Tests: `src/backend/backend.test.ts`, and `e2e/app.spec.ts` runs the app against a real local server. All registers in them are invented.
+- A desk replaces the register the server holds only when it started from that same copy (the base-revision check). Otherwise the only choice the desk offers is to set its own register aside and use the server's, with a confirmation; it never overwrites a register it did not start from. A server holding the wrong register is cleared by its administrator. There is no route for a desk to overwrite the server: do not add one.
+- Adding a key says what it will do before the key is spent. A write key for an empty server seeds it; for a server holding this desk's own copy it carries on; for a server holding another register it asks to set this Mac's register aside and use the server's. A read key on a Mac with records asks to set its register aside, and warns twice when those records never reached a server. "Set aside" means moved to a dated file beside the register (`banyan.db.before-<restore|read|bring-back>-<time>`), never deleted, and a register set aside for a read key can be brought back from Settings while the one in use has no leaves.
+- When a desk takes the server's register, every leaf number its own register used is recorded in the new one as a blank leaf, so no physical leaf is offered twice. Keep that carry-over on every path that replaces a register.
+- Tests: `internal/server`, `internal/desksync` and `internal/desk` (Go), and `src/backend/backend.test.ts` for the TypeScript reference. All registers in them are invented.
 
 Decisions already made by the owner. Do not reopen them without being asked:
 
 - **The desk works without a server.** Skipping the connection is a full answer. It switches off only the features that need the server, of which register backup is the first.
 - **One server, always, and its address stays out of the app and out of this repository.** The app is meant to be downloadable by anyone, so it ships with no API URL: the treasurer is given the address together with the key. Do not add a default address, and do not write the server's hostname into code, tests or docs here.
-- **Keys.** One key per login. There are two privileges: one that writes, and read for everyone else. A key becomes single-use: the desk redeems it once for a long-lived token, and the server invalidates the key. Key and token are kept in plain files in the data folder on purpose. The server is what protects them, not the client.
+- **Keys.** A key's first letter says its role: `W-` writes, `R-` reads. The prefix is only a hint for the app; the server decides when the key is redeemed, and a key offered for the wrong role is refused without being spent. Keys issued before the prefix still work. One key per login. There are two privileges: one that writes, and read for everyone else. A key becomes single-use: the desk redeems it once for a long-lived token, and the server invalidates the key. Key and token are kept in plain files in the data folder on purpose. The server is what protects them, not the client.
 - **Who writes.** A desk holding the write token writes cheques. The register must never hold two live cheques with the same leaf number.
 - **One write token at a time.** Issuing a new write key invalidates the previous one. A handover is: issue a key, the new desk redeems it and restores, the old desk becomes read-only. This holds until there are full roles.
 - **Sync, not backup.** There is no separate backup. After every write to the register (a cheque written, updated, confirmed, voided) the whole register file is sent to the server, and the server's copy is the live remote copy. A desk can restore from it. That is the point of the server.
@@ -285,7 +287,7 @@ Decisions already made by the owner. Do not reopen them without being asked:
 
 ## Editing conventions
 
-- **Keep `CHANGELOG.md` current.** Every release adds a section at the top: `## <version> — <date>`, then a few bullets of key features and user-visible fixes only, in plain words for the people who use the app. No internal refactors, test changes or commit lists. Add it in the same change that bumps the version, before the tag is pushed.
+- **Keep `CHANGELOG.md` current.** Every release adds a section at the top: `## <version> — <date>`, then a few bullets of key features and user-visible fixes only, in plain words for the people who use the app. No internal refactors, test changes or commit lists. Add it in the same change that bumps the version, before the tag is pushed, and add the same release to the timeline in `docs/index.html` (`#changes`).
 - Make the smallest coherent change. Existing behaviour is kept, not redesigned; where the code and a recording in `tests/golden/` disagree, the recording is the reference until the owner says otherwise.
 - Keep field placement in `static/cheque-layout.js` only. If you find yourself writing a second copy of the geometry for the preview, stop — that is the bug this structure exists to prevent.
 - Keep the frontend build-free: no bundler, no framework, no CDN asset.
@@ -319,7 +321,7 @@ what the plain-paper test is for.
 ### 2. Everything compiles and still matches the recordings
 
 ```sh
-pnpm typecheck && pnpm test && pnpm e2e
+GOWORK=off go test ./... && pnpm typecheck && pnpm test
 ```
 
 `pnpm test` replays the recordings in `tests/golden/`. A failure there means

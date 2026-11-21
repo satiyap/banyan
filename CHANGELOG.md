@@ -2,6 +2,15 @@
 
 Key features in each release of the Banyan desktop app. The full history is in the git log.
 
+## 2.1.1 — 2026-11-21
+
+- Keys now say what they are for: `W-` makes this Mac the cheque desk, `R-` shows reports only. A key offered for the wrong role is refused without being used up.
+- Before a key is spent, the app says what it will do. Anything that would replace this Mac's register asks first, and asks twice if those records never reached a server.
+- Switching a Mac with records to a read key sets its register aside as a file, never deletes it. Settings can bring it back while the register in use has no leaves.
+- Taking the server's register records every leaf this Mac had already used, so no leaf is offered for a cheque twice.
+- A desk can no longer overwrite a server register it didn't start from. The only choice offered is to set this Mac's register aside and use the server's.
+- A reports-only app, and the first-launch screen, no longer ask for local-network access. Only the cheque desk checks the printer.
+
 ## 2.1.0 — 2026-11-19
 
 - **Settings ▸ Permissions** shows whether Banyan may use the local network, as a coloured dot with a word, and opens System Settings when it isn't allowed.

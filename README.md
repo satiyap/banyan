@@ -147,13 +147,14 @@ Because the renderer ships inside the app, every install renders the same page, 
 On first launch the app asks for the server's address and then a key. No address ships with the app. Anyone can download it, but only someone given both can reach the organisation's server. **Skip for now** is a complete answer: the desk writes and prints without a server and doesn't ask again. **Settings** (in the rail, or **Banyan ▸ Settings…**, ⌘,) reopens the screen. There, **Switch key** replaces the key for the same server, **Reset key** forgets the key but keeps the address, and **Change the address** is for when the server moves.
 
 - **The address is checked first.** The app calls `GET /api/v1/info` and only accepts a Banyan server it understands. It doesn't ask for the key until one answers, so a mistyped address never sees it.
-- **A key works once.** Connecting trades it for a token the app keeps in `connection.json`, and the key is spent.
-- **The key decides what the app becomes.** A write key makes it the cheque desk. A read key makes it a reports-only app: the Year and Monthly pages, fetched from the server each time, with the desk, register and printing closed. No register is downloaded to a reader's Mac, and one already there is neither shown nor sent.
+- **A key says what it's for.** Keys start `W-` (this Mac becomes the cheque desk) or `R-` (reports only). A key works once: connecting trades it for a token the app keeps in `connection.json`.
+- **The app says what a key will do before it's spent.** A write key for an empty server sends this Mac's register as the first copy. A write key for a server that holds another register asks to set this Mac's register aside and use the server's; the leaves this Mac used are recorded in the server's register, so none is offered again. A read key on a Mac with records asks to set its register aside, and asks twice if those records were never sent to a server.
+- **The key decides what the app becomes.** A write key makes it the cheque desk. A read key makes it a reports-only app: the Year and Monthly pages, fetched from the server each time, with the desk, register and printing closed. No register is downloaded to a reader's Mac. A register already there is set aside as a file, and Settings offers to bring it back if the Mac returns to being a desk.
 - **Every change goes to the server** straight away, and again when the app quits and opens, to catch anything that didn't get through. The title bar shows when the server last had the register, or why it doesn't.
 - **One desk writes at a time.** Connecting a new desk retires the old one, which then says so in its title bar.
-- **If the desk and the server have different registers**, nothing is sent or fetched until the connection screen gets an answer about which one is right. Choosing the server's copy fetches it and restarts the app. The register it replaces is kept beside it as `banyan.db.before-restore-<time>`.
+- **A desk never overwrites a register it didn't start from.** If the server's copy has moved on, nothing is sent or fetched until Settings gets an answer, and the only answer offered is to set this Mac's register aside and use the server's. The app restarts, and the register it replaces is kept beside it as `banyan.db.before-restore-<time>`. A server holding the wrong register is cleared by its administrator.
 
-That last step is also how a register moves to a new Mac: install the app, connect with a new write key, and choose the server's register.
+That's also how a register moves to a new Mac: install the app, connect with a new write key, and confirm using the server's register.
 
 ## The Banyan server
 
@@ -229,7 +230,7 @@ A failing replay means behaviour changed. If the change is intended, update the 
 
 | Workflow | Runs on | What it does |
 | --- | --- | --- |
-| `ci.yml` | A push to `main`, or a pull request that changes code. Changes to docs and `*.md` alone don't trigger it. | Typecheck, unit tests, the app end to end. |
+| `ci.yml` | A push to `main`, or a pull request that changes code. Changes to docs and `*.md` alone don't trigger it. | The Go app's tests on macOS, the server's on Linux, and the TypeScript reference's typecheck and unit tests. The Electron app is frozen and its end-to-end run is no longer in CI. |
 | `image.yml` | A push to `main` that changes something in the server image. | Builds `ghcr.io/satiyap/banyan` on a GitHub-hosted ARM64 runner. |
 | `release.yml` | A `v*` tag. | Runs the Go tests, builds the Go app (`scripts/build-mac.sh`) into `Banyan-mac-arm64.dmg` and publishes a GitHub release. |
 
