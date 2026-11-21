@@ -25,3 +25,25 @@ build/cheques/
 
 # Local design-review notes and live-preview state
 .impeccable/
+
+# Signing and upload material. These live in ~/.config/banyan and GitHub
+# secrets, never here: certificates, keys, profiles, passwords, the Apple ID
+# and 1Password references, and the built store package.
+*.p12
+*.pfx
+*.pem
+*.key
+*.cer
+*.csr
+*.provisionprofile
+*.mobileprovision
+*.keychain
+*.keychain-db
+*.pkg
+.env
+.env.*
+apple-id
+apple-app-password*
+*-password
+*password*.txt
+update-signing-key
