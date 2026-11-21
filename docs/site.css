@@ -76,6 +76,11 @@ strong { font-weight: 500; color: var(--color-ink); }
 .hero h1 { font-size: clamp(2.75rem, 4.6vw + 1rem, 5.25rem); max-width: 9ch; }
 .hero .lead { margin-top: var(--space-lg); color: var(--color-ink-2); max-width: 24ch; }
 .get { display: grid; justify-items: start; gap: var(--space-sm); }
+.get-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-md); }
+/* Apple's own badge, unaltered: at least 40px tall, with clear space round it. */
+.mas { display: inline-flex; padding: 0; line-height: 0; border-radius: 9px; }
+.mas img { height: 48px; width: auto; }
+.mas:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 4px; }
 .hero .actions { align-items: flex-start; }
 .hero .platform { color: var(--color-muted); font-size: var(--text-sm); max-width: 32ch; }
 .hero .platform.is-unsupported { color: var(--color-ink); font-size: var(--text-md); font-weight: 500; max-width: 30ch; }
