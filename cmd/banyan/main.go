@@ -45,6 +45,19 @@ func main() {
 		log.Print("Restored the register from the Banyan server.")
 	}
 
+	// A Mac switched to a read key sets its register aside; one set aside
+	// earlier can be put back. Both happen before anything opens the register.
+	if done, err := desksync.ApplyPendingSetAside(paths.register, time.Now); err != nil {
+		log.Printf("this Mac's register could not be set aside: %v", err)
+	} else if done {
+		log.Print("Set this Mac's register aside for a read key.")
+	}
+	if done, err := desksync.ApplyPendingBringBack(paths.register, time.Now); err != nil {
+		log.Printf("the register set aside could not be brought back: %v", err)
+	} else if done {
+		log.Print("Brought back the register set aside earlier.")
+	}
+
 	// Development builds never reach the printer: a cheque leaf is usually loaded.
 	printDisabled := os.Getenv("BANYAN_PRINT_DISABLED") == "1"
 	if isDev() {

@@ -227,7 +227,9 @@ func (s *Store) IssueKey(role, label string) (IssuedKey, error) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	key := newKey()
+	// The first letter says what the key is for, so the app can tell before
+	// the key is spent: W- writes (the desk), R- reads (reports).
+	key := map[string]string{"write": "W-", "read": "R-"}[role] + newKey()
 	expires := isoTime(s.now().Add(keyDays * 24 * time.Hour))
 	_, err := s.db.Exec("INSERT INTO keys (hash, role, label, created_at, expires_at) VALUES (?, ?, ?, ?, ?)",
 		sha([]byte(normalKey(key))), role, label, s.stamp(), expires)

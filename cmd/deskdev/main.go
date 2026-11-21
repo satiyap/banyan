@@ -12,9 +12,11 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	banyan "github.com/satiyap/banyan"
 	"github.com/satiyap/banyan/internal/desk"
+	"github.com/satiyap/banyan/internal/desksync"
 	"github.com/satiyap/banyan/internal/webpdf"
 )
 
@@ -49,6 +51,19 @@ func main() {
 			log.Fatal(err)
 		}
 	}
+	// What the app does at start: a register fetched from the server, or one
+	// set aside or brought back, goes in before anything opens it. Restart
+	// deskdev by hand when the page says the app is restarting.
+	register := filepath.Join(abs, "banyan.db")
+	if _, err := desksync.ApplyPendingRestore(desksync.SyncPaths{DbPath: register, ConnectionPath: filepath.Join(abs, "connection.json")}, time.Now); err != nil {
+		log.Fatal(err)
+	}
+	if _, err := desksync.ApplyPendingSetAside(register, time.Now); err != nil {
+		log.Fatal(err)
+	}
+	if _, err := desksync.ApplyPendingBringBack(register, time.Now); err != nil {
+		log.Fatal(err)
+	}
 	app, err := desk.New(desk.Config{
 		DBPath:         filepath.Join(abs, "banyan.db"),
 		CalPath:        cal,
@@ -57,7 +72,7 @@ func main() {
 		DataStaticDir:  filepath.Join(abs, "static"),
 		ConnectionPath: filepath.Join(abs, "connection.json"),
 		PrintDisabled:  true,
-	}, desk.Options{})
+	}, desk.Options{OnRestoreReady: func() { log.Print("Restart deskdev to put the register in place.") }})
 	if err != nil {
 		log.Fatal(err)
 	}

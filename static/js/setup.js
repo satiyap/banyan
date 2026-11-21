@@ -52,7 +52,7 @@
     el('stepUrl').hidden = true;
     el('stepKey').hidden = false;
     el('serverFound').textContent = `Found ${found.name || 'a Banyan server'} at ${found.api_url}.`;
-    el('setupLead').textContent = 'Enter your user key. A key works once: connecting uses it up.';
+    el('setupLead').textContent = 'Enter your user key. A W- key makes this Mac the cheque desk; an R- key shows reports only. A key works once.';
     el('userKey').value = '';
     el('userKey').focus();
   }
@@ -133,6 +133,12 @@
       : sync.error ? sync.error
       : 'Every change is copied to the server as it is made.';
 
+    const aside = (!reader && now.set_aside) || [];
+    el('bringBack').hidden = !aside.length;
+    if (aside.length) {
+      el('bringText').textContent = `When this Mac was switched to a read key on ${stamp(aside[0].at)}, its register was set aside. This Mac’s register has no leaves in it now, so that one can be brought back.`;
+    }
+
     const choice = connected && !reader && sync.choice;
     el('choice').hidden = !choice;
     if (choice) {
@@ -148,6 +154,7 @@
     document.body.dataset.mode = mode;
     el('first').hidden = mode !== 'first';
     el('app').hidden = mode !== 'app';
+    permissions();
     if (mode === 'first') { if (!pending) firstUrl(); return false; }
     addSettingsLink();
     closeEdits();
@@ -162,12 +169,73 @@
     catch (e) { busy(false); fail(e.message); }
   }
 
-  /* Connect with a key, then go to the app unless a choice is still open. */
+  /* Connect with a key. First ask what it will do, without spending it: a key
+     that would set this Mac's register aside waits for a confirmation. */
   function connect(apiUrl, key) {
-    act(() => call('PUT', '/api/connection', { api_url: apiUrl, user_key: key }), (answer) => {
+    act(() => call('POST', '/api/connection/plan', { api_url: apiUrl, user_key: key }), (plan) => {
+      if (plan.action === 'connect') { redeem(apiUrl, key); return; }
+      confirmKey(plan, () => redeem(apiUrl, key, plan.action));
+    });
+  }
+  function redeem(apiUrl, key, confirmed) {
+    const body = { api_url: apiUrl, user_key: key };
+    if (confirmed) body.confirm = confirmed;
+    act(() => call('PUT', '/api/connection', body), (answer) => {
       pending = null;
+      if (confirmed) { restarting(); return; }
       if (!show(answer)) toApp();
     });
+  }
+  function restarting() {
+    const box = confirmBox();
+    box.replaceChildren(h('p', 'Done. The app is restarting.'));
+    box.hidden = false;
+  }
+
+  /* The one question a key can raise, worded the same for both kinds of key. */
+  function confirmBox() {
+    const form = first() ? el('stepKey') : el('formKey');
+    let box = document.getElementById('keyConfirm');
+    if (!box) box = h('div.key-confirm', { id: 'keyConfirm', role: 'group', 'aria-labelledby': 'keyConfirmHead' });
+    form.after(box);
+    return box;
+  }
+  function confirmKey(plan, go) {
+    const local = plan.local || {};
+    const leaves = local.leaves || [];
+    const server = (plan.server && plan.server.name) || 'The server';
+    const listed = leaves.length > 6 ? leaves.slice(0, 6).join(', ') + ` and ${leaves.length - 6} more` : leaves.join(', ');
+    const lines = [];
+    let head, action;
+    if (plan.action === 'replace') {
+      head = `${server} already holds a register.`;
+      action = 'Set this Mac’s register aside and use the server’s';
+      lines.push('This Mac becomes the cheque desk and uses the server’s register. This Mac’s own register is kept as a file, not deleted.');
+      if (leaves.length) lines.push(`The ${leaves.length === 1 ? 'leaf' : `${leaves.length} leaves`} this Mac used (${listed}) ${leaves.length === 1 ? 'is' : 'are'} recorded in the server’s register as used, so none is offered again.`);
+    } else {
+      head = 'This is a read key.';
+      action = 'Set this Mac’s register aside and show the server’s reports';
+      const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+      lines.push(`This Mac becomes a reports-only app. Its register (${count(local.entities || 0, 'payee', 'payees')}, ${count(leaves.length, 'leaf', 'leaves')}) is kept as a file, not deleted.`);
+      if (local.unsynced) lines.push('These records were never sent to a server. The file on this Mac will be the only copy of them.');
+    }
+    lines.push('The app restarts.');
+    const yes = h('button.btn.btn-primary.btn-sm', { type: 'button' }, action);
+    const no = h('button.btn.btn-quiet.btn-sm', { type: 'button' }, 'Cancel');
+    // Records that exist nowhere else ask twice.
+    const twice = plan.action === 'set-aside' && local.unsynced;
+    yes.addEventListener('click', () => {
+      if (twice && !yes.dataset.armed) { yes.dataset.armed = '1'; yes.textContent = 'Yes, set them aside'; return; }
+      go();
+    });
+    no.addEventListener('click', () => { box.hidden = true; clearError(); });
+    const box = confirmBox();
+    box.replaceChildren(
+      h('p.key-confirm-head', { id: 'keyConfirmHead' }, head),
+      ...lines.map((line, i) => h(i === 1 && twice ? 'p.key-confirm-warn' : 'p', line)),
+      h('div.btn-row', yes, no));
+    box.hidden = false;
+    yes.focus();
   }
 
   /* A button that discards something asks once more before it acts. */
@@ -232,8 +300,10 @@
 
   // Resetting forgets the key and keeps the address, so only a new key is needed.
   armed(el('btnReset'), 'Yes, reset the key', () => act(() => call('POST', '/api/connection/skip'), (answer) => { pending = null; show(answer); }));
-  armed(el('btnOverwrite'), 'Yes, replace the server’s copy', () => act(() => call('POST', '/api/sync/overwrite', { confirm: true }), (answer) => { if (!show(answer)) toApp(); }));
-  armed(el('btnRestore'), 'Yes, replace this desk’s copy', () => {
+  armed(el('btnBringBack'), 'Yes, bring it back', () => act(
+    () => call('POST', '/api/connection/bring-back', { name: now.set_aside[0].name, confirm: true }),
+    () => { el('bringText').textContent = 'The app is restarting to put it back.'; }));
+  armed(el('btnRestore'), 'Yes, set it aside', () => {
     clearError();
     busy(true);
     call('POST', '/api/sync/restore', { confirm: true }).then(
@@ -275,13 +345,21 @@
       .catch(() => {})
       .finally(() => { btn.disabled = false; });
   }
-  fetch('/shell/permissions').then((res) => (res.ok ? res.json() : null)).then((p) => {
-    if (!p || !p.local_network) return;
-    el('permissions').hidden = false;
-    drawNet(p);
-    // Checked on opening, so the row says something true, and a first-time ask is shown here.
-    checkNet();
-  }).catch(() => {});
+  // Only a desk prints, so only a desk is asked for the local network. Readers
+  // and a first launch never touch it: the check itself is what makes macOS ask.
+  let netChecked = false;
+  function permissions() {
+    if (first() || isReader()) { el('permissions').hidden = true; return; }
+    if (netChecked) return;
+    netChecked = true;
+    fetch('/shell/permissions').then((res) => (res.ok ? res.json() : null)).then((p) => {
+      if (!p || !p.local_network || first() || isReader()) return;
+      el('permissions').hidden = false;
+      drawNet(p);
+      // Checked on opening, so the row says something true, and a first-time ask is shown here.
+      checkNet();
+    }).catch(() => {});
+  }
   el('btnNetCheck').addEventListener('click', checkNet);
   el('btnNetOpen').addEventListener('click', () => { fetch('/shell/permissions/open', { method: 'POST' }).catch(() => {}); });
 

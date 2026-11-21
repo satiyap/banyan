@@ -91,6 +91,14 @@ type ServerInfo struct {
 type Discovery struct {
 	ApiUrl string `json:"api_url"`
 	ServerInfo
+	// Nil when the server is too old to say.
+	Register *HeldRegister `json:"-"`
+}
+
+// HeldRegister is whether a server holds a register, and its latest copy's number.
+type HeldRegister struct {
+	Held     bool
+	Revision *int64
 }
 
 const (
@@ -186,14 +194,14 @@ func ApplyPendingRestore(paths SyncPaths, now func() time.Time) (bool, error) {
 	if err := json.Indent(&agreement, raw, "", "  "); err != nil {
 		return false, fmt.Errorf("%s is not valid JSON: %w", note, err)
 	}
-	if exists(paths.DbPath) {
-		stamp := strings.NewReplacer(":", "-", ".", "-").Replace(isoTime(now()))
-		if err := os.Rename(paths.DbPath, paths.DbPath+".before-restore-"+stamp); err != nil {
-			return false, err
-		}
+	aside, err := setAside(paths.DbPath, "restore", now())
+	if err != nil {
+		return false, err
 	}
-	for _, sidecar := range []string{"-wal", "-shm", "-journal"} {
-		if err := remove(paths.DbPath + sidecar); err != nil {
+	// The leaves the old register used go into the new one when the desk
+	// opens it, so none of them is offered again.
+	if aside != "" {
+		if err := writeCarry(paths.DbPath, aside); err != nil {
 			return false, err
 		}
 	}
@@ -505,7 +513,18 @@ func (s *Sync) Discover(apiUrlInput any) (Discovery, error) {
 	} else {
 		name = ""
 	}
-	return Discovery{ApiUrl: apiUrl, ServerInfo: ServerInfo{Name: name, Api: api, Features: features}}, nil
+	found := Discovery{ApiUrl: apiUrl, ServerInfo: ServerInfo{Name: name, Api: api, Features: features}}
+	// Newer servers say whether they hold a register, and which copy. Older ones say nothing.
+	if raw := bytes.TrimSpace(info["register"]); len(raw) > 0 && raw[0] == '{' {
+		var held struct {
+			Held     bool   `json:"held"`
+			Revision *int64 `json:"revision"`
+		}
+		if json.Unmarshal(raw, &held) == nil {
+			found.Register = &HeldRegister{Held: held.Held, Revision: held.Revision}
+		}
+	}
+	return found, nil
 }
 
 func isJSONNumber(raw json.RawMessage) bool {
@@ -524,6 +543,14 @@ func firstUnits(text string, n int) string {
 
 // Connect redeems a key for this desk and remembers the token it buys.
 func (s *Sync) Connect(apiUrlInput, keyInput any) (SyncStatus, error) {
+	return s.ConnectAs(apiUrlInput, keyInput, "", true)
+}
+
+// ConnectAs redeems a key, asking the server for a key of the role want ("",
+// "write" or "read"): a key of the other role is refused and not used up.
+// Without flush, nothing is sent until asked, for a desk about to set its
+// register aside.
+func (s *Sync) ConnectAs(apiUrlInput, keyInput any, want string, flush bool) (SyncStatus, error) {
 	key, err := connection.CleanUserKey(keyInput)
 	if err != nil {
 		return SyncStatus{}, err
@@ -533,8 +560,12 @@ func (s *Sync) Connect(apiUrlInput, keyInput any) (SyncStatus, error) {
 	if err != nil {
 		return SyncStatus{}, err
 	}
+	body := `{"key":` + jsQuote(key)
+	if want == "write" || want == "read" {
+		body += `,"want":` + jsQuote(want)
+	}
 	r, err := s.fetch(info.ApiUrl, "/api/v1/redeem", http.MethodPost,
-		map[string]string{"content-type": "application/json"}, []byte(`{"key":`+jsQuote(key)+`}`))
+		map[string]string{"content-type": "application/json"}, []byte(body+`}`))
 	if err != nil {
 		return SyncStatus{}, err
 	}
@@ -562,6 +593,9 @@ func (s *Sync) Connect(apiUrlInput, keyInput any) (SyncStatus, error) {
 	s.err = ""
 	s.choice = nil
 	s.mu.Unlock()
+	if !flush {
+		return s.Status(), nil
+	}
 	return s.Flush(), nil
 }
 
@@ -614,7 +648,7 @@ func (s *Sync) Flush() SyncStatus {
 			running = make(chan struct{})
 			s.running = running
 			s.mu.Unlock()
-			s.push(false)
+			s.push()
 			s.mu.Lock()
 			s.running = nil
 			s.mu.Unlock()
@@ -650,22 +684,18 @@ func (s *Sync) wait() {
 	}
 }
 
-// Overwrite replaces the server's register with this desk's. Only ever after
-// the treasurer chose it.
-func (s *Sync) Overwrite() SyncStatus {
-	s.wait()
-	s.push(true)
-	return s.Status()
-}
+// There is deliberately no way for a desk to replace a register the server
+// holds unless it started from that same copy. A server holding the wrong
+// register is cleared by its administrator, not overwritten by a desk.
 
-func (s *Sync) push(force bool) {
+func (s *Sync) push() {
 	s.sending.Lock()
 	defer s.sending.Unlock()
 	c, ok := s.connection()
 	if !ok || !exists(s.paths.DbPath) {
 		return
 	}
-	if err := s.send(c, force); err != nil {
+	if err := s.send(c); err != nil {
 		message := "The register could not be sent: " + err.Error()
 		var known *connection.ConnectionError
 		if errors.As(err, &known) {
@@ -679,14 +709,14 @@ func (s *Sync) push(force bool) {
 
 // send returns an error only for what went wrong on the way; a refusal by the
 // server is recorded and is not one.
-func (s *Sync) send(c connection.Connection, force bool) error {
+func (s *Sync) send(c connection.Connection) error {
 	data, err := Snapshot(s.paths.DbPath)
 	if err != nil {
 		return err
 	}
 	digest := sha(data)
 	a := s.agreed(c.ApiUrl)
-	if !force && a != nil && a.sha256 == digest {
+	if a != nil && a.sha256 == digest {
 		// Nothing has changed since the server last took it.
 		s.mu.Lock()
 		s.pending = false
@@ -703,7 +733,7 @@ func (s *Sync) send(c connection.Connection, force bool) error {
 	if a != nil {
 		base = a.revision
 	}
-	if force || a == nil {
+	if a == nil {
 		// No shared starting point yet: see what the server holds first.
 		r, err := s.fetch(c.ApiUrl, "/api/v1/register/status", http.MethodGet, auth, nil)
 		if err != nil {
@@ -722,14 +752,11 @@ func (s *Sync) send(c connection.Connection, force bool) error {
 		if held.Latest != nil && held.Latest.Sha256 == digest {
 			return s.agree(c.ApiUrl, *held.Latest, digest)
 		}
-		if held.Latest != nil && !force {
+		if held.Latest != nil {
 			s.offer(held.Latest)
 			return nil
 		}
 		base = 0
-		if held.Latest != nil {
-			base = held.Latest.Revision
-		}
 	}
 
 	auth["content-type"] = "application/vnd.sqlite3"

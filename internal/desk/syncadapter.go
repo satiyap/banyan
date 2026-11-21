@@ -40,13 +40,24 @@ func (s serverSync) Status() SyncStatus {
 
 func (s serverSync) Discover(apiURL any) (ServerInfo, error) {
 	found, err := s.sync.Discover(apiURL)
-	return ServerInfo{Name: found.Name, APIURL: found.ApiUrl}, err
+	info := ServerInfo{Name: found.Name, APIURL: found.ApiUrl}
+	if found.Register != nil {
+		info.Register = &HeldRegister{Held: found.Register.Held, Revision: found.Register.Revision}
+	}
+	return info, err
 }
 
-func (s serverSync) Connect(apiURL, userKey any) error {
-	_, err := s.sync.Connect(apiURL, userKey)
+func (s serverSync) ConnectAs(apiURL, userKey any, want string, flush bool) error {
+	_, err := s.sync.ConnectAs(apiURL, userKey, want, flush)
 	return err
 }
+
+func (s serverSync) Agreement(apiURL string) (int64, bool) {
+	revision, _, ok := s.sync.Agreement(apiURL)
+	return revision, ok
+}
+
+func (s serverSync) EverAgreed() bool { return s.sync.EverAgreed() }
 
 func (s serverSync) Disconnect(forgetServer bool) error {
 	_, err := s.sync.Disconnect(forgetServer)
@@ -55,11 +66,6 @@ func (s serverSync) Disconnect(forgetServer bool) error {
 
 func (s serverSync) Flush() error {
 	s.sync.Flush()
-	return nil
-}
-
-func (s serverSync) Overwrite() error {
-	s.sync.Overwrite()
 	return nil
 }
 

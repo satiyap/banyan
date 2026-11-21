@@ -542,7 +542,6 @@ func TestReadKeyMakesTheAppReportsOnly(t *testing.T) {
 	// Nothing it does reaches the server's register, and the treasurer is not retired.
 	a.sync.Schedule()
 	a.sync.Flush()
-	a.sync.Overwrite()
 	if b.latestRevision() != before || b.count("PUT /api/v1/register") != puts || b.count("GET /api/v1/register/status") != 1 {
 		t.Fatalf("a reports-only app asked %v", b.seen)
 	}
@@ -749,28 +748,6 @@ func TestHandingOverTheNewDeskRestoresAndTheOldDeskIsRetired(t *testing.T) {
 	}
 }
 
-func TestTreasurerCanChooseThisDesksRegisterOverTheServers(t *testing.T) {
-	b := newBackend(t)
-	a := newDesk(t)
-	a.connect(b, "write")
-	second := newDesk(t)
-	second.addPayee("The Right One")
-	if status := second.connect(b, "write"); status.Choice == nil {
-		t.Fatalf("got %+v", status)
-	}
-	// Asking again changes nothing while the choice stands.
-	if status := second.sync.Flush(); status.Choice == nil || b.latestRevision() != 1 {
-		t.Fatalf("got %+v", status)
-	}
-	status := second.sync.Overwrite()
-	if status.Choice != nil || status.Pending || revisionOf(status) != 2 {
-		t.Fatalf("got %+v", status)
-	}
-	if got := b.puts[len(b.puts)-1].Get("x-base-revision"); got != "1" {
-		t.Fatalf("overwrote from base %s", got)
-	}
-}
-
 func TestDeskThatHasFallenBehindIsRefusedAndTheTreasurerIsAsked(t *testing.T) {
 	b := newBackend(t)
 	a := newDesk(t)
@@ -801,11 +778,6 @@ func TestDeskThatHasFallenBehindIsRefusedAndTheTreasurerIsAsked(t *testing.T) {
 	if retrying {
 		t.Fatal("a desk waiting on the treasurer keeps trying")
 	}
-
-	status = a.sync.Overwrite()
-	if status.Choice != nil || status.Pending || revisionOf(status) != 3 || status.Error != "" {
-		t.Fatalf("got %+v", status)
-	}
 }
 
 func TestRegisterThatArrivesDamagedChangesNothing(t *testing.T) {
@@ -823,8 +795,12 @@ func TestRegisterThatArrivesDamagedChangesNothing(t *testing.T) {
 	_, err = a.sync.FetchForRestore()
 	wantMessage(t, err, `The server has no register yet\.`)
 
-	a.sync.Overwrite()
+	held, err := Snapshot(a.paths.DbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
 	b.mu.Lock()
+	b.accept(held)
 	b.damage = true
 	b.mu.Unlock()
 	_, err = a.sync.FetchForRestore()

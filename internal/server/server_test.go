@@ -219,8 +219,11 @@ func TestIssuingKeysNeedsTheAdminToken(t *testing.T) {
 func TestAKeyWorksOnceHoweverItIsTyped(t *testing.T) {
 	w := newWorld(t)
 	key := w.issue("write", "treasurer")
-	if !regexp.MustCompile(`^([A-Z2-9]{5}-){4}[A-Z2-9]{5}$`).MatchString(key) {
-		t.Fatalf("a key of the wrong shape")
+	if !regexp.MustCompile(`^W-([A-Z2-9]{5}-){4}[A-Z2-9]{5}$`).MatchString(key) {
+		t.Fatalf("a key of the wrong shape: %s", key)
+	}
+	if read := w.issue("read", ""); !strings.HasPrefix(read, "R-") {
+		t.Fatalf("a read key not marked R-: %s", read)
 	}
 	typed := strings.ReplaceAll(strings.ToLower(key), "-", " ")
 	first := w.postJSON("/api/v1/redeem", map[string]string{"key": typed}, nil).json(t)
@@ -481,7 +484,7 @@ func TestTheReportsAreDrawnFromTheLatestRegisterReceived(t *testing.T) {
 func TestAnyoneMayAskWhatTheServerIs(t *testing.T) {
 	w := newWorld(t)
 	want(t, "info", string(w.get("/api/v1/info", nil).body),
-		`{"service":"banyan","name":"Invented Association","api":1,"features":{"register_sync":true,"restore":true,"member_reports":true},"sign_in":"/login"}`)
+		`{"service":"banyan","name":"Invented Association","api":1,"features":{"register_sync":true,"restore":true,"member_reports":true},"sign_in":"/login","register":{"held":false,"revision":null}}`)
 }
 
 // through sends a desk's requests straight into the server.
@@ -626,7 +629,6 @@ func TestAReadKeyMakesTheAppReportsOnly(t *testing.T) {
 	// Nothing it does reaches the server's register, and the treasurer is not retired.
 	a.sync.Schedule()
 	a.sync.Flush()
-	a.sync.Overwrite()
 	want(t, "server unchanged", w.latest(), before)
 	if _, err := a.sync.FetchForRestore(); err == nil {
 		t.Errorf("a reader fetched the register")
@@ -705,21 +707,36 @@ func TestHandingOver(t *testing.T) {
 	}
 }
 
-func TestTheTreasurerCanChooseThisDesksRegister(t *testing.T) {
+func TestADeskCannotReplaceARegisterItDidNotStartFrom(t *testing.T) {
 	w := newWorld(t)
 	a := w.desk()
 	if _, err := a.sync.Connect(origin, w.issue("write", "")); err != nil {
 		t.Fatal(err)
 	}
 	b := w.desk()
-	addEntity(t, b.db, "The Right One")
+	addEntity(t, b.db, "Only On This Mac")
 	status, err := b.sync.Connect(origin, w.issue("write", ""))
 	if err != nil || status.Choice == nil {
 		t.Fatalf("no choice offered: %+v %v", status, err)
 	}
-	after := b.sync.Overwrite()
-	if after.Choice != nil || after.Pending || rev(after) != 2 {
-		t.Errorf("after overwriting: %+v", after)
+	// Asking again sends nothing: the server keeps the register it holds.
+	again := b.sync.Flush()
+	if again.Choice == nil || w.latest() != 1 {
+		t.Errorf("after asking again: %+v, server at %d", again, w.latest())
+	}
+}
+
+func TestTheServerSaysWhetherItHoldsARegister(t *testing.T) {
+	w := newWorld(t)
+	a := w.desk()
+	if _, err := a.sync.Connect(origin, w.issue("write", "")); err != nil {
+		t.Fatal(err)
+	}
+	want(t, "info", string(w.get("/api/v1/info", nil).body),
+		`{"service":"banyan","name":"Invented Association","api":1,"features":{"register_sync":true,"restore":true,"member_reports":true},"sign_in":"/login","register":{"held":true,"revision":1}}`)
+	found, err := a.sync.Discover(origin)
+	if err != nil || found.Register == nil || !found.Register.Held || *found.Register.Revision != 1 {
+		t.Fatalf("discovered %+v %v", found.Register, err)
 	}
 }
 

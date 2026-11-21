@@ -62,7 +62,7 @@
                 <button type="button" class="btn btn-danger-quiet btn-sm" id="btnReset">Reset key</button>
               </div>
               <form class="set-edit" id="formKey" novalidate hidden>
-                <input type="text" id="setKey" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" aria-labelledby="lblKey" aria-describedby="settingsError">
+                <input type="text" id="setKey" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="W-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" aria-labelledby="lblKey" aria-describedby="settingsError">
                 <button type="submit" class="btn btn-primary btn-sm" id="btnConnect">Connect</button>
                 <button type="button" class="btn btn-quiet btn-sm" id="btnCancelKey">Cancel</button>
               </form>
@@ -81,13 +81,21 @@
         </section>
 
         <section class="panel settings-choice" id="choice" aria-labelledby="choiceHead" hidden>
-          <div class="panel-head"><h2 id="choiceHead">Which register is the right one?</h2></div>
+          <div class="panel-head"><h2 id="choiceHead">The server holds a different register</h2></div>
           <p id="choiceText"></p>
           <div class="btn-row">
-            <button type="button" class="btn btn-quiet" id="btnRestore">Use the server’s register</button>
-            <button type="button" class="btn btn-quiet" id="btnOverwrite">Use this desk’s register</button>
+            <button type="button" class="btn btn-quiet" id="btnRestore">Set this Mac’s register aside and use the server’s</button>
           </div>
-          <p class="set-sub">Nothing is sent or fetched until you choose. Whichever you use replaces the other. If it is the server’s, the register on this desk now is kept beside it as a file, and the app restarts.</p>
+          <p class="set-sub">Nothing is sent or fetched until you choose. This Mac’s register is kept beside the server’s as a file, the leaves it used are recorded as used so none is offered again, and the app restarts. A server holding the wrong register is cleared by its administrator.</p>
+        </section>
+
+        <section class="panel settings-choice" id="bringBack" aria-labelledby="bringHead" hidden>
+          <div class="panel-head"><h2 id="bringHead">A register was set aside on this Mac</h2></div>
+          <p id="bringText"></p>
+          <div class="btn-row">
+            <button type="button" class="btn btn-quiet" id="btnBringBack">Bring it back</button>
+          </div>
+          <p class="set-sub">The empty register in use now is kept beside it as a file, and the app restarts.</p>
         </section>
 
 
@@ -153,7 +161,7 @@
       <p class="first-found"><span id="serverFound"></span> <button type="button" class="btn-link" id="btnBackToUrl">Change the address</button></p>
       <div class="field">
         <label for="userKey">User key</label>
-        <input type="text" id="userKey" name="user_key" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" aria-describedby="setupError">
+        <input type="text" id="userKey" name="user_key" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="W-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" aria-describedby="setupError">
       </div>
       <div class="btn-row">
         <button type="submit" class="btn btn-primary" id="btnSave">Connect</button>

@@ -376,8 +376,9 @@ func (a *App) routeTable() []route {
 		put("/api/connection", a.putConnection),
 		post("/api/connection/check", a.checkConnection),
 		post("/api/connection/skip", a.skipConnection),
+		post("/api/connection/plan", a.planConnection),
+		post("/api/connection/bring-back", a.bringBack),
 		post("/api/sync/flush", a.syncFlush),
-		post("/api/sync/overwrite", a.syncOverwrite),
 		post("/api/sync/restore", a.syncRestore),
 	}
 }

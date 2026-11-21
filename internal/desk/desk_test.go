@@ -939,19 +939,35 @@ type fakeSync struct {
 	readOnly  bool
 	scheduled int
 	asked     []string
+	register  *HeldRegister // what the server says it holds
+	agreed    *int64        // the copy this desk last agreed on
+	connected []string      // "want/flush" for each key redeemed
+	fetched   int
 }
 
 func (f *fakeSync) ReadOnly() bool     { return f.readOnly }
 func (f *fakeSync) Status() SyncStatus { return SyncStatus{Connected: true, ReadOnly: f.readOnly} }
 func (f *fakeSync) Discover(any) (ServerInfo, error) {
-	return ServerInfo{Name: "Invented", APIURL: "https://banyan.invalid"}, nil
+	return ServerInfo{Name: "Invented", APIURL: "https://banyan.invalid", Register: f.register}, nil
 }
-func (f *fakeSync) Connect(any, any) error { return notConnected("That key has already been used.") }
+func (f *fakeSync) ConnectAs(_, key any, want string, flush bool) error {
+	if k, _ := key.(string); KeyRole(k) == "" {
+		return notConnected("That key has already been used.")
+	}
+	f.connected = append(f.connected, fmt.Sprintf("%s/%v", want, flush))
+	return nil
+}
+func (f *fakeSync) Agreement(string) (int64, bool) {
+	if f.agreed == nil {
+		return 0, false
+	}
+	return *f.agreed, true
+}
+func (f *fakeSync) EverAgreed() bool               { return false }
 func (f *fakeSync) Disconnect(bool) error  { return nil }
 func (f *fakeSync) Schedule()              { f.scheduled++ }
 func (f *fakeSync) Flush() error           { return nil }
-func (f *fakeSync) Overwrite() error       { return nil }
-func (f *fakeSync) FetchForRestore() error { return nil }
+func (f *fakeSync) FetchForRestore() error { f.fetched++; return nil }
 func (f *fakeSync) Read(path string) (*http.Response, error) {
 	f.asked = append(f.asked, path)
 	if strings.HasPrefix(path, "/api/v1/reports/entities.csv") {
@@ -1001,10 +1017,12 @@ func TestServerConnection(t *testing.T) {
 		if refused.Code != 400 || refused.Body.String() != `{"detail":"That key has already been used."}` {
 			t.Errorf("a refused key: %d %s", refused.Code, refused.Body)
 		}
-		for _, path := range []string{"/api/sync/overwrite", "/api/sync/restore"} {
-			if res := send(app, "POST", path, versioned, &skip); res.Code != 400 {
-				t.Errorf("%s without a confirmation: %d", path, res.Code)
-			}
+		if res := send(app, "POST", "/api/sync/restore", versioned, &skip); res.Code != 400 {
+			t.Errorf("a restore without a confirmation: %d", res.Code)
+		}
+		// A desk never replaces the server's register: there is no route for it.
+		if res := send(app, "POST", "/api/sync/overwrite", versioned, &skip); res.Code != 404 {
+			t.Errorf("/api/sync/overwrite answered %d", res.Code)
 		}
 		ready := 0
 		restoring := newApp(t, configFor(t, filepath.Join(work, "restore")), Options{Sync: link, OnRestoreReady: func() { ready++ }})

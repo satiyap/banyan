@@ -25,6 +25,13 @@
 .perm-state { display: flex; align-items: center; gap: var(--space-xs); }
 .perm-state .dot { flex: none; }
 
+/* What a key will do to this Mac's register, asked before the key is spent. */
+.key-confirm { grid-column: 2 / -1; margin-top: var(--space-md); padding: var(--space-md); border: var(--rule-hair) solid var(--color-rule); border-radius: 4px; background: var(--color-paper-hi); }
+.key-confirm p { margin: 0 0 var(--space-xs); max-width: 56ch; }
+.key-confirm .key-confirm-head { font-weight: 500; color: var(--ink-1, inherit); }
+.key-confirm .key-confirm-warn { color: var(--stamp); }
+.key-confirm .btn-row { margin-top: var(--space-sm); }
+
 .settings-error { background: var(--stamp-w); color: var(--stamp); border-color: var(--stamp-rule); margin: var(--space-2xs) 0 var(--space-md); }
 .settings-choice p { max-width: 60ch; }
 .settings-choice .btn-row { margin: var(--space-md) 0; }
@@ -61,7 +68,7 @@
 @media (max-width: 44rem) {
   .set-row { grid-template-columns: minmax(0, 1fr); }
   .set-actions { justify-content: flex-start; }
-  .set-edit { grid-column: 1; }
+  .set-edit, .key-confirm { grid-column: 1; }
   .first-sheet { padding: var(--space-lg); }
   .first-head { font-size: var(--text-2xl); }
 }

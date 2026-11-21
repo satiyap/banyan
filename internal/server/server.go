@@ -434,13 +434,29 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Restore       bool `json:"restore"`
 			MemberReports bool `json:"member_reports"`
 		}
+		// Whether a register is held, and which copy, so an app can say what a
+		// key will do before it is spent. Nothing about what the register holds.
+		type held struct {
+			Held     bool   `json:"held"`
+			Revision *int64 `json:"revision"`
+		}
+		latest, err := s.Store.Latest()
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		register := held{}
+		if latest != nil {
+			register = held{true, &latest.Revision}
+		}
 		writeJSON(w, 200, struct {
 			Service  string   `json:"service"`
 			Name     string   `json:"name"`
 			API      int      `json:"api"`
 			Features features `json:"features"`
 			SignIn   string   `json:"sign_in"`
-		}{"banyan", name, APIVersion, features{true, true, true}, "/login"})
+			Register held     `json:"register"`
+		}{"banyan", name, APIVersion, features{true, true, true}, "/login", register})
 
 	// The desk exchanges its key for a token. It asks for a write key by
 	// name, so a read key typed into a desk by mistake is not used up.

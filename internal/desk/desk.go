@@ -26,6 +26,7 @@ import (
 
 	"github.com/satiyap/banyan/internal/calibration"
 	"github.com/satiyap/banyan/internal/db"
+	"github.com/satiyap/banyan/internal/desksync"
 	"github.com/satiyap/banyan/internal/printing"
 	"github.com/satiyap/banyan/internal/pycompat"
 	"github.com/satiyap/banyan/internal/render"
@@ -113,6 +114,11 @@ func New(cfg Config, opts Options) (*App, error) {
 	}
 	database, err := db.Open(cfg.DBPath, db.Options{Now: opts.Now})
 	if err != nil {
+		return nil, err
+	}
+	// After taking the server's register, the leaves the set-aside one used
+	// are recorded in it, so none of them is offered for a cheque again.
+	if err := carryLeaves(database, cfg.DBPath); err != nil {
 		return nil, err
 	}
 	cal, err := calibration.Load(cfg.CalPath)
@@ -284,4 +290,29 @@ func textOf(value any) string {
 		return s
 	}
 	return fmt.Sprint(value)
+}
+
+// carryLeaves records, as leaves used up without a cheque, every leaf number
+// a set-aside register used that the register now in use does not know.
+func carryLeaves(database *db.Database, dbPath string) error {
+	from, leaves := desksync.ReadCarry(dbPath)
+	if len(leaves) == 0 {
+		return nil
+	}
+	known, err := database.UsedNumbers()
+	if err != nil {
+		return err
+	}
+	var missing []string
+	for _, n := range leaves {
+		if !known[n] {
+			missing = append(missing, n)
+		}
+	}
+	if len(missing) > 0 {
+		if _, err := database.AddBlankLeaves(missing, "Used on this Mac before it took the server’s register ("+from+")"); err != nil {
+			return err
+		}
+	}
+	return os.Remove(desksync.CarryPath(dbPath))
 }
