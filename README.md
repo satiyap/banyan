@@ -39,7 +39,7 @@ The desk works without internet and without a server. The server is optional and
 
 Download **[Banyan-mac-arm64.dmg](https://github.com/satiyap/banyan/releases/latest/download/Banyan-mac-arm64.dmg)**. It needs a Mac with Apple silicon. The [website](https://satiyap.github.io/banyan/) walks through the screens and how to get started.
 
-If macOS blocks the app the first time you open it, allow it under **System Settings ▸ Privacy & Security ▸ Open Anyway**. That happens when a release is built without an Apple Developer ID.
+From 2.2.1, releases are signed with an Apple Developer ID and notarized, so macOS opens them without a warning. Versions before that need **System Settings ▸ Privacy & Security ▸ Open Anyway** the first time.
 
 The first time Banyan checks your printer, macOS asks whether it may find devices on your local network. Allow it, so Banyan can tell whether the printer is switched on. Printing works either way. **Settings ▸ Permissions** shows whether it's allowed, with a coloured dot, and opens System Settings if you need to change it.
 
@@ -261,7 +261,6 @@ A release is signed and notarized when the repository holds an Apple Developer I
 - Better member sign-in. Today it's one key per browser, and sessions can only be seen or revoked through the admin routes.
 - The monthly PDF on the members' pages. It's drawn by the desk's browser engine, which the server doesn't have.
 - A plain-paper test print from the desktop app. Its rendered page matches the reference renderer's, but nothing has been printed from it yet.
-- Developer ID signing. Until then each release is ad-hoc signed.
 - Windows. Printing currently goes through the Mac's `lp`.
 - An off-site backup of the server's volume. The server keeps 200 copies of the register, but they're all on one volume.
 

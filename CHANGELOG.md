@@ -2,6 +2,11 @@
 
 Key features in each release of the Banyan desktop app. The full history is in the git log.
 
+## 2.2.1 — 2026-11-21
+
+- Banyan is now signed with an Apple Developer ID and notarized by Apple, so it opens without the "Apple could not verify" warning.
+- If you're on 2.2.0, this release arrives through **Settings ▸ Updates**, with no download.
+
 ## 2.2.0 — 2026-11-21
 
 - **Banyan updates itself.** It checks for a new version when it opens and every six hours. When there is one, the title bar says so, and **Settings ▸ This app ▸ Updates** shows what changed with an **Install and restart** button.
