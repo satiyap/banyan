@@ -1,6 +1,6 @@
-# App Store Connect answers for Banyan Cheque Desk (com.banyan.desk)
+# App Store Connect answers for Banyan Desk (com.banyan.desk)
 
-Name: Banyan Cheque Desk · SKU: banyan-desk · Primary language: English (U.K.)
+Name: Banyan Desk · SKU: banyan-desk · Primary language: English (U.K.)
 Category: Finance (primary), Business (secondary)
 Price: Free · Availability: all countries (the leaf geometry is Indian, but any printer can be calibrated)
 Copyright: 2026 Satiya Prasath

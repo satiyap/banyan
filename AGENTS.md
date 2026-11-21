@@ -1,4 +1,4 @@
-# Banyan Cheque Desk (desktop app) — Agent Guide
+# Banyan Desk (desktop app) — Agent Guide
 
 ## Purpose
 
