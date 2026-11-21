@@ -1,0 +1,1 @@
+Print the date, payee, amount in words and figures and the A/C payee crossing onto a real cheque leaf, then keep a register of every leaf used.

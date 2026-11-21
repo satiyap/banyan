@@ -1,0 +1,13 @@
+Thank you for reviewing Banyan.
+
+No account or sign-in is needed. On first launch Banyan offers to connect to a Banyan server; choose "Skip for now". The app is complete without a server: the server is optional, run by the organisation itself, and only adds register sync and read-only reports for its members. Its address is given privately to each organisation, so there is no demo server.
+
+To try the app without a printer:
+1. Desk: choose "New entity", give it a name and the payee printed on the cheque, and save.
+2. Tray: write a cheque to it with an amount. The leaf preview above the rows shows exactly where each field will print.
+3. Choose "Record as handwritten", then "Record it". The cheque goes into the register as if it had been written by hand; printing is the only step that needs a printer.
+4. Open Register to see the leaf, and Year and Monthly to see it in the reports. In Year, open the entity to see its cheques; any cheque opens a panel to change its category or note.
+
+Banyan prints only onto genuine bank-issued cheque leaves loaded in the user's printer. It never draws a cheque, security artwork, a signature or a MICR line on blank paper. It uses the printing entitlement to send the composed page to the macOS print system at 100% scale, the network client entitlement for the optional server and to check the printer is switched on, and the Downloads entitlement to save CSV and PDF exports there.
+
+The cheque preview is drawn over a photograph of the kind of leaf the app was measured for (a State Bank of India multi-city cheque), with the account, name and MICR line removed, so a treasurer can see where each field lands on their own bank's leaf. Banyan has no affiliation with the bank and does not use its name or marks for anything else.

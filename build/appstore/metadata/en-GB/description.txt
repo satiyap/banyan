@@ -1,0 +1,34 @@
+Banyan prints cheques and keeps the register for small organisations that pay their bills by cheque: housing societies, residents' associations, clubs, trusts and schools.
+
+Type the payee and the amount. Banyan prints the date, the payee, the amount in words and figures and the A/C payee crossing onto the real cheque leaf in your printer, each in its measured place. Only the signature is left to do by hand. Then it records the cheque, so you always know which leaf went where.
+
+WRITE CHEQUES
+• Amounts in words the Indian way, in lakh and crore, ending "Only".
+• Figures that end in "/-" so nothing can be added after them.
+• A/C payee crossing on by default; strike "or bearer" and star-fill when you want them.
+• A preview of the leaf before anything prints, drawn from the same measurements the printer uses.
+• Print one cheque, or a batch: the first leaf prints alone and is checked before the rest go.
+
+KEEP THE REGISTER
+• Every leaf, by cheque book: printed, logged, voided or misprinted. Nothing is ever deleted; a mistake is voided, with a record of why.
+• A leaf number is never offered twice, even after a misprint.
+• Find any cheque by payee, number, amount or note.
+
+KNOW WHAT'S DUE
+• Banyan learns which payments recur and how often, and shows what is due this week and what is overdue.
+• One-off payments stay out of the rhythm.
+
+REPORTS FOR THE COMMITTEE
+• The financial year, April to March, by category, quarter and payee.
+• A month-by-category report as a PDF, ready to print or send.
+• CSV exports of everything, safe to open in a spreadsheet.
+• Open any entity, category or month to see the cheques behind it, and change a category or a note there.
+
+SHARE THE REPORTS, IF YOU WANT TO
+Connect Banyan to your own Banyan server and members can read the reports in a browser with a key you give them. They see reports, never the register, and cannot write a cheque. The server is optional: without one, everything stays on your Mac.
+
+YOUR DATA STAYS YOURS
+No account and no sign-up. The register is one file on your Mac. Banyan sends nothing anywhere unless you connect a server you run.
+
+PRINTERS AND CHEQUES
+Built and measured for a State Bank of India multi-city (CTS-2010) cheque on an HP LaserJet Pro MFP M126nw. Other printers and leaves work once calibrated with a test print on plain paper; Banyan never rescales the page. It prints only onto bank-issued cheque leaves and never draws a cheque, its security patterns or its MICR line on blank paper.

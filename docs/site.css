@@ -166,3 +166,9 @@ footer p { margin-left: auto; }
   footer p { margin-left: 0; }
   .crop { --o: 9px; --l: 6px; }
 }
+
+/* The privacy policy: one column of running text. */
+.prose { max-width: 68ch; }
+.prose h1.head { max-width: none; margin-bottom: var(--space-sm); }
+.prose h2 { font-size: var(--text-lg); margin: var(--space-lg) 0 var(--space-xs); }
+.prose p { margin: 0 0 var(--space-sm); }
