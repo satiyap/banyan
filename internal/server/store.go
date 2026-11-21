@@ -103,6 +103,29 @@ CREATE TABLE IF NOT EXISTS tokens (
   last_seen_at TEXT,
   revoked_at TEXT
 );
+-- Report heads and notes anyone with a key may change, on an entity or a
+-- leaf of the register held here. Kept outside the register: the server never
+-- writes a register. The last edit to arrive wins, stamped with this server's
+-- clock; every edit is also logged with who made it and what it replaced.
+CREATE TABLE IF NOT EXISTS annotations (
+  subject TEXT NOT NULL,
+  field TEXT NOT NULL,
+  value TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL,
+  updated_by TEXT NOT NULL DEFAULT '',
+  token_id INTEGER,
+  PRIMARY KEY (subject, field)
+);
+CREATE TABLE IF NOT EXISTS annotation_log (
+  id INTEGER PRIMARY KEY,
+  subject TEXT NOT NULL,
+  field TEXT NOT NULL,
+  old_value TEXT,
+  new_value TEXT NOT NULL,
+  at TEXT NOT NULL,
+  by TEXT NOT NULL DEFAULT '',
+  token_id INTEGER
+);
 CREATE TABLE IF NOT EXISTS revisions (
   revision INTEGER PRIMARY KEY AUTOINCREMENT,
   sha256 TEXT NOT NULL,
@@ -504,6 +527,13 @@ func (s *Store) PutRegister(data []byte, base, tokenID int64) (*Revision, error)
 	}
 	if err := s.publish(revision); err != nil {
 		return nil, err
+	}
+	// The first register an empty server takes starts afresh: heads and notes
+	// left from a register it held before were about other entities and leaves.
+	if latest == nil {
+		if _, err := s.db.Exec("DELETE FROM annotations"); err != nil {
+			return nil, err
+		}
 	}
 	s.prune()
 	return &Revision{Revision: revision, SHA256: digest, Bytes: int64(len(data)), SyncedAt: syncedAt}, nil

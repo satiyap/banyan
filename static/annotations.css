@@ -1,0 +1,13 @@
+/* Heads & notes: one row per leaf or entity, with the two things anyone may change. */
+.ann-list { display: grid; }
+.ann-row { display: grid; grid-template-columns: minmax(180px, 1.5fr) 110px 120px minmax(170px, 1fr) minmax(200px, 1.6fr); gap: var(--space-sm); align-items: center; padding: 10px var(--space-2xs); border-top: 1px solid var(--rule-soft); }
+.ann-row .strong { font-size: 16px; font-weight: 600; }
+.ann-row > .num { text-align: right; font-size: 16px; font-weight: 500; }
+.ann-headings { border-top: 0; color: var(--ink-3); font-size: 13px; padding-top: 0; padding-bottom: var(--space-2xs); }
+.ann-row select, .ann-row .ann-note { width: 100%; }
+.ann-edited { margin-top: 4px; font-size: 12px; }
+.ann-search { min-width: 220px; }
+@media (max-width: 900px) {
+  .ann-row { grid-template-columns: 1fr 1fr; }
+  .ann-headings { display: none; }
+}

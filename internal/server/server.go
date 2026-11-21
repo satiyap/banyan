@@ -32,6 +32,7 @@ import (
 	"time"
 	"unicode/utf16"
 
+	"github.com/satiyap/banyan/internal/annotate"
 	"github.com/satiyap/banyan/internal/desk"
 )
 
@@ -76,6 +77,8 @@ var readerAPI = []*regexp.Regexp{
 	regexp.MustCompile(`^/api/reports$`),
 	regexp.MustCompile(`^/api/reports/monthly$`),
 	regexp.MustCompile(`^/api/reports/[a-z]+\.csv$`),
+	// Every leaf of a period with its head and note, so a member can change them.
+	regexp.MustCompile(`^/api/reports/leaves$`),
 }
 
 func readerMay(p string) bool {
@@ -168,7 +171,9 @@ func New(cfg Config, opts Options) (*Server, error) {
 	// The desk's own app, pointed at the latest register and reachable only
 	// through the short list of report routes below.
 	nowhere := filepath.Join(cfg.DataDir, "no-such-folder")
-	deskOpts := desk.Options{Sync: desk.NoSync(filepath.Join(nowhere, "connection.json"))}
+	// Heads and notes come from the server's own set, which is newer than the
+	// copy inside the last register the desk sent.
+	deskOpts := desk.Options{Sync: desk.NoSync(filepath.Join(nowhere, "connection.json")), Annotations: store.Annotations}
 	if opts.Now != nil {
 		deskOpts.Now = opts.Now
 		deskOpts.Today = func() string { return opts.Now().Format("2006-01-02") }
@@ -509,6 +514,43 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		forwarded.Header.Set("Accept", accept)
 		s.desk.ServeHTTP(w, forwarded)
 
+	// Heads and notes. The writing desk takes the whole set to keep its
+	// register level; any desk sends an edit, as its key.
+	case get && p == "/api/v1/annotations":
+		if _, err := s.writer(r); err != nil {
+			fail(w, err)
+			return
+		}
+		list, err := s.Store.Annotations()
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		writeJSON(w, 200, struct {
+			Annotations any `json:"annotations"`
+		}{list})
+
+	case post && p == "/api/v1/annotations":
+		session, err := s.deskSession(r)
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		s.annotate(w, r, session)
+
+	// A member changes a head or a note from the report pages.
+	case post && p == "/api/annotations":
+		session, err := s.reader(r)
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		if session == nil {
+			writeJSON(w, 401, detail{"Not signed in"})
+			return
+		}
+		s.annotate(w, r, session)
+
 	// Restoring a desk. The whole register leaves the server only for the writer.
 	case get && p == "/api/v1/register":
 		s.getRegister(w, r)
@@ -733,6 +775,15 @@ func (s *Server) admin(w http.ResponseWriter, r *http.Request, p string) {
 			return
 		}
 		writeJSON(w, 201, issued)
+	case get && p == "/admin/annotations":
+		entries, err := s.Store.AnnotationLog(1000)
+		if err != nil {
+			fail(w, err)
+			return
+		}
+		writeJSON(w, 200, struct {
+			Log []LogEntry `json:"log"`
+		}{entries})
 	case get && p == "/admin/access":
 		access, err := s.Store.ListAccess()
 		if err != nil {
@@ -754,6 +805,38 @@ func (s *Server) admin(w http.ResponseWriter, r *http.Request, p string) {
 	default:
 		notFound(w)
 	}
+}
+
+// annotate takes one edit to a head or a note. Nothing else can be changed
+// here: not a cheque, not a leaf number, not an amount, and never the register.
+func (s *Server) annotate(w http.ResponseWriter, r *http.Request, session *Session) {
+	// JSON only: a form on another site cannot send it with a member's cookie.
+	if !strings.HasPrefix(strings.ToLower(r.Header.Get("Content-Type")), "application/json") {
+		writeJSON(w, 415, detail{"Send the edit as JSON."})
+		return
+	}
+	sent := sentObject(r)
+	subject, field := textField(sent, "subject"), textField(sent, "field")
+	value, err := annotate.Clean(subject, field, textField(sent, "value"))
+	if err != nil {
+		writeJSON(w, 422, detail{err.Error()})
+		return
+	}
+	held, err := s.desk.HasSubject(subject)
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	if !held {
+		writeJSON(w, 404, detail{"The register on the server has no such entity or leaf."})
+		return
+	}
+	saved, err := s.Store.Annotate(subject, field, value, session)
+	if err != nil {
+		fail(w, err)
+		return
+	}
+	writeJSON(w, 200, saved)
 }
 
 func (s *Server) signIn(w http.ResponseWriter, r *http.Request) {

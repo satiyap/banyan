@@ -943,6 +943,7 @@ type fakeSync struct {
 	agreed    *int64        // the copy this desk last agreed on
 	connected []string      // "want/flush" for each key redeemed
 	fetched   int
+	sent      []string // edits to heads and notes sent on to the server
 }
 
 func (f *fakeSync) ReadOnly() bool     { return f.readOnly }
@@ -963,11 +964,20 @@ func (f *fakeSync) Agreement(string) (int64, bool) {
 	}
 	return *f.agreed, true
 }
-func (f *fakeSync) EverAgreed() bool               { return false }
+func (f *fakeSync) EverAgreed() bool       { return false }
 func (f *fakeSync) Disconnect(bool) error  { return nil }
 func (f *fakeSync) Schedule()              { f.scheduled++ }
 func (f *fakeSync) Flush() error           { return nil }
 func (f *fakeSync) FetchForRestore() error { f.fetched++; return nil }
+func (f *fakeSync) Send(method, path string, body []byte) (*http.Response, error) {
+	// A reader's edit, answered as the server would.
+	if method == "POST" && path == "/api/v1/annotations" {
+		f.sent = append(f.sent, string(body))
+		return &http.Response{StatusCode: 200, Header: http.Header{},
+			Body: io.NopCloser(strings.NewReader(`{"subject":"cheque:1","field":"notes","value":"x","updated_at":"2031-06-18T04:00:00.000Z","updated_by":"flat 12"}`))}, nil
+	}
+	return nil, notConnected("The Banyan server could not be reached. Check the internet connection.")
+}
 func (f *fakeSync) Read(path string) (*http.Response, error) {
 	f.asked = append(f.asked, path)
 	if strings.HasPrefix(path, "/api/v1/reports/entities.csv") {
@@ -1081,6 +1091,18 @@ func TestServerConnection(t *testing.T) {
 		}
 		if res := get(app, "/api/connection"); res.Code != 200 {
 			t.Errorf("/api/connection: %d", res.Code)
+		}
+		// A head or a note is the one thing a reader may change: it goes to the server, as this reader.
+		edit := `{"subject":"cheque:1","field":"notes","value":"x"}`
+		if res := send(app, "POST", "/api/annotations", versioned, &edit); res.Code != 200 || !strings.Contains(res.Body.String(), `"updated_by":"flat 12"`) {
+			t.Errorf("a reader's edit: %d %s", res.Code, res.Body)
+		}
+		if len(link.sent) != 1 || link.sent[0] != edit {
+			t.Errorf("sent to the server: %v", link.sent)
+		}
+		leaves := get(app, "/api/reports/leaves?fy=2031", "X-Desk-Version", app.Version())
+		if leaves.Code != 502 || link.asked[len(link.asked)-1] != "/api/v1/reports/leaves?fy=2031" {
+			t.Errorf("the leaves come from the server: %d %v", leaves.Code, link.asked)
 		}
 		page := get(app, "/")
 		if page.Code != 200 || !strings.Contains(page.Body.String(), `<body class="reader">`) || !strings.Contains(page.Body.String(), `<meta name="desk-version"`) {

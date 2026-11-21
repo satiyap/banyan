@@ -2,6 +2,12 @@
 
 What each release of the Banyan desktop app does. The full history is in the git log.
 
+## 2.3.0 — 2026-11-21
+
+- Heads: anyone with a key can set the report head and note on an entity or a single leaf.
+- Members can see every leaf in the reports.
+- Changes show who made them; the latest change wins.
+
 ## 2.2.1 — 2026-11-21
 
 - Signed and notarized releases.

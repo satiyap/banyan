@@ -2,6 +2,7 @@ package desk
 
 import (
 	"fmt"
+	"github.com/satiyap/banyan/internal/annotate"
 	"net/http"
 	"path/filepath"
 
@@ -446,6 +447,9 @@ func (a *App) editCheque(rq *req) (*response, error) {
 	}
 	if err := a.db.UpdateCheque(chequeID, db.ChequeChanges{Event: "edited", Detail: detail, Columns: changes}); err != nil {
 		return nil, err
+	}
+	if memo := req.strp("memo"); memo != nil && *memo != row.Memo {
+		a.noteDeskEdit(annotate.ChequeSubject(chequeID), annotate.Notes, *memo)
 	}
 	return ok(obj{{"id", chequeID}, {"changed", true}, {"detail", detail}})
 }

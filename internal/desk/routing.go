@@ -346,6 +346,8 @@ func (a *App) routeTable() []route {
 		put("/api/entities/{entity_id}", a.updateEntity),
 		del("/api/entities/{entity_id}", a.deleteEntity),
 
+		get("/api/reports/leaves", a.leaves),
+		post("/api/annotations", a.annotateRoute),
 		get("/api/reports/monthly", a.monthlyReport),
 		get("/api/reports/monthly.pdf", a.monthlyReportPDF),
 		get("/api/reports", a.report),

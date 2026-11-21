@@ -317,6 +317,20 @@ func (s *Sync) Read(path string) (*http.Response, error) {
 	return s.call(c.ApiUrl, path, http.MethodGet, bearer(c), nil)
 }
 
+// Send makes one call to the Banyan server as this app, with a JSON body when
+// one is given. The caller closes the body.
+func (s *Sync) Send(method, path string, body []byte) (*http.Response, error) {
+	c, ok := s.anyConnection()
+	if !ok {
+		return nil, &connection.ConnectionError{Message: "This app is not connected to the server."}
+	}
+	headers := bearer(c)
+	if body != nil {
+		headers["content-type"] = "application/json"
+	}
+	return s.call(c.ApiUrl, path, method, headers, body)
+}
+
 func (s *Sync) agreed(apiUrl string) *agreed {
 	raw, err := os.ReadFile(agreedPath(s.paths.ConnectionPath))
 	if err != nil {

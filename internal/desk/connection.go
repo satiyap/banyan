@@ -84,6 +84,9 @@ type Syncer interface {
 	// Read fetches something a reader may see from the Banyan server, as that
 	// reader. The caller closes the body.
 	Read(path string) (*http.Response, error)
+	// Send makes one call to the Banyan server as this app, with a JSON body
+	// when one is given. The caller closes the body.
+	Send(method, path string, body []byte) (*http.Response, error)
 }
 
 // offline is the Syncer of a desk with no way to reach a server: it remembers
@@ -110,7 +113,7 @@ func (offline) Agreement(string) (int64, bool) { return 0, false }
 
 const noServer = "Connecting to a Banyan server is not available in this build."
 
-func (offline) Discover(any) (ServerInfo, error) { return ServerInfo{}, notConnected(noServer) }
+func (offline) Discover(any) (ServerInfo, error)       { return ServerInfo{}, notConnected(noServer) }
 func (offline) ConnectAs(any, any, string, bool) error { return notConnected(noServer) }
 
 func (o offline) Disconnect(forgetServer bool) error {
@@ -131,6 +134,10 @@ func (offline) FetchForRestore() error {
 }
 
 func (offline) Read(string) (*http.Response, error) {
+	return nil, notConnected("This app is not connected to the server.")
+}
+
+func (offline) Send(string, string, []byte) (*http.Response, error) {
 	return nil, notConnected("This app is not connected to the server.")
 }
 
@@ -461,6 +468,21 @@ func (a *App) readOnly(r *http.Request, path string) *response {
 			}
 		}
 		return res
+	}
+	// A head or a note: the one thing a reader may change, sent to the server as this reader.
+	if r.Method == http.MethodPost && path == "/api/annotations" {
+		body, err := io.ReadAll(io.LimitReader(r.Body, 64<<10))
+		if err != nil {
+			return refused(notConnected("That edit could not be read."))
+		}
+		reply, err := a.syncer.Send(http.MethodPost, "/api/v1/annotations", body)
+		if err != nil {
+			return refused(err)
+		}
+		defer reply.Body.Close()
+		data, _ := io.ReadAll(io.LimitReader(reply.Body, 1<<20))
+		return &response{status: reply.StatusCode,
+			header: [][2]string{{"Content-Type", "application/json"}, {"Cache-Control", "no-store"}}, body: data}
 	}
 	return mustJSON(http.StatusForbidden, obj{{"detail", "This app is connected with a read key. It shows reports only."}})
 }

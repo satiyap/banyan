@@ -128,6 +128,29 @@ CREATE TABLE IF NOT EXISTS blank_leaves (
     reason     TEXT    NOT NULL DEFAULT '',
     created_at TEXT    NOT NULL
 );
+
+`
+
+// annotationsTable is created the first time a head or note is set or
+// fetched, not when the register opens: a register that never uses it opens
+// unchanged, as every earlier desk's does.
+const annotationsTable = `-- Report heads and notes that anyone with a key may set, on an entity or on
+-- one leaf: subject is 'entity:3' or 'cheque:12', field is 'head' or 'notes'.
+-- The Banyan server holds the authoritative set, last edit to reach it wins;
+-- this is the desk's copy. Each value is also written through to the
+-- register's own column where there is one (an entity's head and notes, a
+-- cheque's memo), so a desk from before this table reads the same values. A
+-- leaf's head has no column: it lives only here. pending is 1 for an edit
+-- made on this desk that the server has not accepted yet.
+CREATE TABLE IF NOT EXISTS annotations (
+    subject    TEXT    NOT NULL,
+    field      TEXT    NOT NULL,
+    value      TEXT    NOT NULL DEFAULT '',
+    updated_at TEXT    NOT NULL,
+    updated_by TEXT    NOT NULL DEFAULT '',
+    pending    INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (subject, field)
+);
 `
 
 // Indexes on columns that a register created before entity_id existed only

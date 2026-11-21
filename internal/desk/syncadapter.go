@@ -11,6 +11,9 @@ type serverSync struct {
 	sync *desksync.Sync
 }
 
+// ServerSync is a Syncer over an existing link to the Banyan server.
+func ServerSync(s *desksync.Sync) Syncer { return serverSync{s} }
+
 // defaultSyncer is the link to the Banyan server named in the connection file.
 func defaultSyncer(cfg Config) Syncer {
 	return serverSync{desksync.NewSync(desksync.SyncPaths{DbPath: cfg.DBPath, ConnectionPath: cfg.ConnectionPath}, desksync.Options{})}
@@ -75,3 +78,7 @@ func (s serverSync) FetchForRestore() error {
 }
 
 func (s serverSync) Read(path string) (*http.Response, error) { return s.sync.Read(path) }
+
+func (s serverSync) Send(method, path string, body []byte) (*http.Response, error) {
+	return s.sync.Send(method, path, body)
+}

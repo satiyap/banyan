@@ -51,6 +51,9 @@ type ReportChequeRow struct {
 	ChequeDate  string `json:"cheque_date"`
 	Memo        string `json:"memo"`
 	EntityID    *int64 `json:"entity_id,omitempty"`
+	// Head is this leaf's own report head, when one was chosen for it. It wins
+	// over the entity's.
+	Head *string `json:"-"`
 }
 
 // ReportEntityRow is a row of the entity list; only the fields read here.
@@ -501,6 +504,15 @@ func HeadOf(entity *ReportEntityRow) string {
 	return UNCATEGORISED
 }
 
+// HeadOfRow is the head one cheque reports under: its own when one was
+// chosen, otherwise its entity's.
+func HeadOfRow(entity *ReportEntityRow, row *ReportChequeRow) string {
+	if row != nil && row.Head != nil && slices.Contains(HEADS, *row.Head) {
+		return *row.Head
+	}
+	return HeadOf(entity)
+}
+
 func entityIndex(entities []ReportEntityRow) map[int64]*ReportEntityRow {
 	index := make(map[int64]*ReportEntityRow, len(entities))
 	for i := range entities {
@@ -598,7 +610,7 @@ func Build(rows []ReportChequeRow, entities []ReportEntityRow, fy int, quarter *
 	}
 	ent := entityIndex(entities)
 
-	categoryOf := func(r *ReportChequeRow) string { return HeadOf(entityFor(ent, r)) }
+	categoryOf := func(r *ReportChequeRow) string { return HeadOfRow(entityFor(ent, r), r) }
 
 	start, end, err := PeriodBounds(fy, quarter)
 	if err != nil {
@@ -677,9 +689,11 @@ func Build(rows []ReportChequeRow, entities []ReportEntityRow, fy int, quarter *
 				EntityID:   id,
 				EntityName: name,
 				PayeeName:  r.Payee,
-				Category:   categoryOf(r),
-				Kind:       "regular",
-				Columns:    make([]int64, len(columns)),
+				// The entity's own head: a leaf moved to another head still
+				// belongs to this entity.
+				Category: HeadOf(e),
+				Kind:     "regular",
+				Columns:  make([]int64, len(columns)),
 			}}
 			if e != nil {
 				s.out.PayeeName = e.PayeeName
@@ -1069,7 +1083,7 @@ func Monthly(rows []ReportChequeRow, entities []ReportEntityRow, fy *int, last *
 			continue
 		}
 		e := entityFor(ent, r)
-		head := HeadOf(e)
+		head := HeadOfRow(e, r)
 		name := r.Payee
 		if e != nil {
 			name = cmp.Or(e.EntityName, e.PayeeName)
@@ -1155,4 +1169,9 @@ func Monthly(rows []ReportChequeRow, entities []ReportEntityRow, fy *int, last *
 		Totals: totals,
 		Years:  years,
 	}, nil
+}
+
+// Years is every financial year with a cheque in it, and the current one, newest first.
+func Years(rows []ReportChequeRow, today string) ([]FyOption, error) {
+	return yearsWithData(rows, today)
 }

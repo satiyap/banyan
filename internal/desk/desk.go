@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/satiyap/banyan/internal/annotate"
 	"github.com/satiyap/banyan/internal/calibration"
 	"github.com/satiyap/banyan/internal/db"
 	"github.com/satiyap/banyan/internal/desksync"
@@ -70,6 +71,10 @@ type Options struct {
 	Renderer *render.Renderer
 	// The link to the Banyan server.
 	Sync Syncer
+	// Where report heads and notes come from instead of the register's copy.
+	// The Banyan server sets it to its own set, which is newer than the copy
+	// in the last register a desk sent.
+	Annotations func() ([]annotate.Annotation, error)
 }
 
 // resolvePrinter picks the queue a job goes to. Tests stand a queue name in for it.
@@ -101,6 +106,13 @@ type App struct {
 	// Requests that change the register run one at a time, as they did when
 	// the server had a single thread.
 	writing sync.Mutex
+
+	// Report heads and notes, and the round with the server that keeps them level.
+	notes    *db.Annotations
+	annMu    sync.Mutex // one round with the server at a time
+	kick     chan struct{}
+	stop     chan struct{}
+	stopOnce sync.Once
 }
 
 // New opens the register and loads the calibration. It fails at once when the
@@ -128,7 +140,8 @@ func New(cfg Config, opts Options) (*App, error) {
 	if err := os.MkdirAll(cfg.PDFDir, 0o755); err != nil {
 		return nil, err
 	}
-	a := &App{cfg: cfg, opts: opts, db: database, cal: cal, renderer: opts.Renderer, syncer: opts.Sync}
+	a := &App{cfg: cfg, opts: opts, db: database, cal: cal, renderer: opts.Renderer, syncer: opts.Sync,
+		notes: db.AnnotationsOf(database), kick: make(chan struct{}, 1), stop: make(chan struct{})}
 	if a.renderer == nil {
 		a.renderer = &render.Renderer{Assets: cfg.Assets}
 	}
@@ -150,6 +163,8 @@ func New(cfg Config, opts Options) (*App, error) {
 
 	// Catch up on anything that did not reach the server before the last quit.
 	a.syncer.Schedule()
+	go a.watchAnnotations()
+	a.kickAnnotations()
 	return a, nil
 }
 
@@ -163,6 +178,7 @@ func (a *App) Sync() Syncer { return a.syncer }
 // its timer. The register opens a connection for each call and closes it
 // again, so there is nothing held open there.
 func (a *App) Close() {
+	a.stopOnce.Do(func() { close(a.stop) })
 	if stopper, ok := a.syncer.(interface{ Close() }); ok && a.ownSync {
 		stopper.Close()
 	}

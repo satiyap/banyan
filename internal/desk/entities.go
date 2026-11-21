@@ -1,6 +1,7 @@
 package desk
 
 import (
+	"github.com/satiyap/banyan/internal/annotate"
 	"net/http"
 	"sort"
 
@@ -223,6 +224,10 @@ func (a *App) updateEntity(rq *req) (*response, error) {
 		return nil, err
 	}
 	fields := append(db.EntityFields{db.F("payee_name", req.str("payee_name"))}, entityFields(req)...)
+	before, err := a.db.GetEntity(entityID)
+	if err != nil {
+		return nil, err
+	}
 	renamed, err := a.db.UpdateEntity(entityID, fields)
 	if err != nil {
 		switch {
@@ -232,6 +237,16 @@ func (a *App) updateEntity(rq *req) (*response, error) {
 			return nil, refuse(http.StatusConflict, message(err))
 		}
 		return nil, err
+	}
+	// A head or note changed here goes to the server like a member's edit.
+	if before != nil {
+		subject := annotate.EntitySubject(entityID)
+		if head := req.strp("head"); head != nil && *head != before.Head {
+			a.noteDeskEdit(subject, annotate.Head, *head)
+		}
+		if notes := req.str("notes"); notes != before.Notes {
+			a.noteDeskEdit(subject, annotate.Notes, notes)
+		}
 	}
 	return ok(obj{{"id", entityID}, {"renamed", renamed}})
 }

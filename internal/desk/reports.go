@@ -46,7 +46,13 @@ func (a *App) reportInputs() ([]reports.ReportChequeRow, []reports.ReportEntityR
 	if err != nil {
 		return nil, nil, err
 	}
-	return reportRows(issued), reportEntities(entities), nil
+	rows, ents := reportRows(issued), reportEntities(entities)
+	set, err := a.annotationSet()
+	if err != nil {
+		return nil, nil, err
+	}
+	set.Overlay(rows, ents)
+	return rows, ents, nil
 }
 
 func (a *App) buildReport(fy, quarter *int64) (*reports.Report, error) {
