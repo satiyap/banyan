@@ -8,7 +8,9 @@
 #
 # The Apple ID comes from $APPLE_ID, or else ~/.config/banyan/apple-id.
 # The app-specific password (appleid.apple.com → Sign-In and Security) comes
-# from $APPLE_APP_PASSWORD, or else is asked for without echoing it.
+# from $APPLE_APP_PASSWORD; or else from 1Password, through the op:// reference
+# in $APPLE_APP_PASSWORD_REF or ~/.config/banyan/apple-app-password-ref; or
+# else is asked for without echoing it.
 set -eu
 
 pkg="${1:-$(cd "$(dirname "$0")/.." && pwd)/dist/appstore/Banyan.pkg}"
@@ -40,6 +42,18 @@ echo "Signed:   $signer"
 echo "Apple ID: $apple_id"
 
 password="${APPLE_APP_PASSWORD:-}"
+ref="${APPLE_APP_PASSWORD_REF:-}"
+if [ -z "$ref" ] && [ -f "$config/apple-app-password-ref" ]; then
+  ref="$(tr -d '[:space:]' < "$config/apple-app-password-ref")"
+fi
+if [ -z "$password" ] && [ -n "$ref" ]; then
+  if command -v op >/dev/null 2>&1; then
+    echo "Password: from 1Password" >&2
+    password="$(op read "$ref")" || { echo "1Password could not read $ref" >&2; exit 1; }
+  else
+    echo "1Password CLI (op) not installed; asking instead" >&2
+  fi
+fi
 if [ -z "$password" ]; then
   printf 'App-specific password: ' >&2
   stty -echo; trap 'stty echo' EXIT INT TERM
