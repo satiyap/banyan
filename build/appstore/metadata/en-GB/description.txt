@@ -1,31 +1,29 @@
-Banyan Desk is the finance desk for organisations run by volunteers and small teams: housing societies, residents' associations, clubs, trusts and schools. It keeps track of everyone you pay, tells you what is due, prints the cheques, keeps the register, and turns the year into reports your committee can read.
+Banyan Desk runs the money side of an organisation from one Mac. Know what is due, pay it properly, keep a record nobody can quietly change, and hand your committee reports they can read.
 
-EVERYONE YOU PAY
-• Staff, vendors, utilities, maintenance contracts and taxes, each with its own category and notes.
-• Banyan learns which payments recur and how often, and shows what is due this fortnight and what is overdue.
-• One-off payments stay out of the rhythm.
+Made for organisations run by small teams and volunteers: societies, associations, clubs, trusts, schools and small businesses.
 
-PAYMENTS BY CHEQUE, DONE PROPERLY
-• Type the payee and the amount. Banyan prints the date, the payee, the amount in words (in lakh and crore) and figures, and the A/C payee crossing onto the real cheque leaf in your printer, each in its measured place. Only the signature is left to do by hand.
-• Figures end in "/-" so nothing can be added after them; strike "or order" and star-fill when you want them.
-• Print one cheque or a batch: the first leaf prints alone and is checked before the rest go.
-• Wrote one by hand? Record it, and it joins the same register.
+KNOW WHAT IS DUE
+• Everyone you pay in one place: staff, vendors, utilities, contracts and taxes, each with a category and notes.
+• Banyan learns how often each payment recurs and shows what is due and what is overdue.
 
-A REGISTER YOU CAN TRUST
-• Every leaf, by cheque book: printed, handwritten, voided or misprinted. Nothing is ever deleted; a mistake is voided, with a record of why.
-• A leaf number is never offered twice.
-• Find any payment by payee, number, amount or note.
+PAY PROPERLY
+• Print cheques straight onto your bank's leaves: date, payee, amount in words and figures, and the crossing, each in its measured place.
+• Batches print one leaf first, so a misfeed costs a leaf, not a book.
+• Paid by hand? Record it in the same register.
+
+A RECORD YOU CAN TRUST
+• Every payment, by book and leaf. Nothing is deleted; a mistake is voided and the reason kept.
+• Find anything by payee, number, amount or note.
 
 REPORTS FOR THE COMMITTEE
-• The financial year, April to March, by category, quarter and payee, with each period set against the last.
-• Every month by category, as a PDF to print or send, and CSV exports of everything.
-• Open any entity, category or month to see the payments behind it, and correct a category or a note in place, with a preview of what moves and an undo.
+• The year by category, quarter and payee, each period set against the last.
+• Monthly reports as PDF, and CSV exports of everything.
+• Open any figure to see the payments behind it, and fix a category or note in place.
 
-SHARE WITH MEMBERS, IF YOU WANT TO
-Connect Banyan to your organisation's own Banyan server and members can read the reports in a browser with a key you give them, and help keep categories and notes right. They never see the register and cannot write a cheque. The server is optional: without one, everything stays on your Mac.
+SHARE, IF YOU WANT TO
+Connect your organisation's own Banyan server and members can read the reports and help keep categories right, without ever touching the register.
 
-YOUR DATA STAYS YOURS
-No account and no sign-up. Your records are one file on your Mac. Banyan sends nothing anywhere unless you connect a server your organisation runs.
+PRIVATE BY DEFAULT
+No account, no sign-up, no tracking. Your records are one file on your Mac.
 
-PRINTERS AND CHEQUES
-Measured for a State Bank of India multi-city (CTS-2010) cheque on an HP LaserJet Pro MFP M126nw. Other printers and leaves work once calibrated with a test print on plain paper; Banyan never rescales the page. It prints only onto bank-issued cheque leaves and never draws a cheque, its security patterns or its MICR line on blank paper.
+Cheques follow India's CTS-2010 standard, with amounts in lakh and crore and the year from April to March. Calibrate any printer with one test print on plain paper.

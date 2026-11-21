@@ -1,1 +1,1 @@
-finance,payments,expenses,cheque,register,housing society,association,treasurer,accounts,lakh
+finance,payments,expenses,accounts,bookkeeping,cheque,register,treasurer,society,club,nonprofit
