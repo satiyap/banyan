@@ -10,13 +10,10 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -37,6 +34,7 @@ var version = "0.0.0-dev"
 func isDev() bool { return strings.HasSuffix(version, "-dev") }
 
 func main() {
+	awaitPrevious()
 	useContainerTemp()
 	paths, err := preparePaths()
 	if err != nil {
@@ -116,6 +114,11 @@ func main() {
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: false,
 		},
+		// The web view's own files stay beside the app's, not in a folder
+		// named after the executable.
+		Windows: application.WindowsOptions{
+			WebviewUserDataPath: webviewDataPath(),
+		},
 		ShouldQuit: func() bool {
 			quitting.Store(true)
 			return true
@@ -154,14 +157,23 @@ func main() {
 		MinHeight: 640,
 		URL:       firstPage(theDesk, paths.connection),
 		JS:        pageJS,
+		// Windows draws the menu bar in the window itself.
+		UseApplicationMenu: true,
 	})
-	// The close button puts the window away rather than destroying it, so a
-	// click on the Dock icon brings the desk back as it was left.
+	// On a Mac the close button puts the window away rather than destroying
+	// it, so a click on the Dock icon brings the desk back as it was left.
+	// Windows has no Dock to bring it back from, so there it quits, the usual
+	// way, sending the register to the server on the way out.
 	window.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) {
 		if quitting.Load() || restarting.Load() {
 			return
 		}
 		event.Cancel()
+		if closeQuits {
+			quitting.Store(true)
+			app.Quit()
+			return
+		}
 		window.Hide()
 	})
 	app.Event.OnApplicationEvent(events.Mac.ApplicationShouldHandleReopen, func(*application.ApplicationEvent) {
@@ -172,10 +184,11 @@ func main() {
 	go bar.watchSync(theDesk)
 	go watchUpdates(updater, bar)
 
-	// Development: BANYAN_RENDER_CHECK=page.html:out.pdf renders one cheque-sized
-	// page with the app's own renderer and quits. Nothing is printed.
+	// Development: BANYAN_RENDER_CHECK=page.html:out.pdf (page.html;out.pdf on
+	// Windows, whose paths hold a colon) renders one cheque-sized page with the
+	// app's own renderer and quits. Nothing is printed.
 	if check := os.Getenv("BANYAN_RENDER_CHECK"); check != "" {
-		html, pdf, _ := strings.Cut(check, ":")
+		html, pdf, _ := strings.Cut(check, string(os.PathListSeparator))
 		go func() {
 			if err := webpdf.Render(html, pdf, webpdf.Page{W: 92, H: 204}); err != nil {
 				log.Printf("render check failed: %v", err)
@@ -298,8 +311,9 @@ func (t *titleBar) watchSync(d *desk.App) {
 // (with BANYAN_UPDATE_KEY, the public key that manifest is signed with).
 func newUpdater(p paths) *update.Updater {
 	// The App Store delivers the App Store build's updates; an app from the
-	// store never downloads or installs its own.
-	if appStore {
+	// store never downloads or installs its own. The updater swaps Mac app
+	// bundles only, so the Windows build is updated by installing the new one.
+	if appStore || !hasUpdater {
 		return nil
 	}
 	manifest, key := update.ManifestURL, update.PublicKey()
@@ -353,30 +367,6 @@ func flush(d *desk.App, limit time.Duration) {
 	case <-done:
 	case <-time.After(limit):
 	}
-}
-
-// relaunch starts the app again once this copy has gone.
-func relaunch() {
-	exe, err := os.Executable()
-	if err != nil {
-		return
-	}
-	if appStore {
-		// In the sandbox the app is opened again through LaunchServices, by a
-		// helper in a session of its own: launchd ends the app's process
-		// group when it quits.
-		bundle := update.BundleOf(exe)
-		if bundle == "" {
-			return
-		}
-		cmd := exec.Command("/bin/sh", "-c",
-			`while kill -0 "$0" 2>/dev/null; do sleep 0.1; done; open "$1" || { sleep 1; open "$1"; }`,
-			strconv.Itoa(os.Getpid()), bundle)
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
-		_ = cmd.Start()
-		return
-	}
-	_ = exec.Command("/bin/sh", "-c", `sleep 1; exec "$0"`, exe).Start()
 }
 
 // trace logs each request and its status when BANYAN_TRACE is set. For development.

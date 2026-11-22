@@ -1,6 +1,6 @@
 # Every push and pull request: the Go desktop app's tests on macOS (the desk
-# against its recorded answers, sync, printing, rendering), the Banyan server
-# on Linux, and the TypeScript reference's typecheck and unit tests. The
+# against its recorded answers, sync, printing, rendering) and on Windows,
+# the Banyan server on Linux, and the TypeScript reference's typecheck and unit tests. The
 # Electron app is frozen: its end-to-end run is no longer part of CI. Nothing
 # here prints: the app refuses to in tests.
 name: CI
@@ -52,6 +52,91 @@ jobs:
         run: GOWORK=off go test ./...
       - name: Build
         run: sh scripts/build-mac.sh
+      # The cheque drawn one field at a time, kept for the Windows job to
+      # measure its own renderer against.
+      - name: Probes for Windows
+        run: |
+          mkdir -p "$RUNNER_TEMP/mac-probes"
+          BANYAN_KEEP_RENDER="$RUNNER_TEMP/mac-probes" GOWORK=off go test ./internal/render -run TestKeepProbes -count=1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac-probes
+          path: ${{ runner.temp }}/mac-probes
+          if-no-files-found: error
+
+  # The Windows build: the desk's recorded answers with Edge as the renderer,
+  # Edge's cheque measured field by field against the Mac's, the print path
+  # through PDFium and the spooler onto Microsoft Print to PDF, and the app
+  # itself started once. Nothing reaches a real printer.
+  windows:
+    needs: desk
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Build
+        run: |
+          command -v makensis || choco install nsis -y --no-progress
+          export PATH="$PATH:/c/Program Files (x86)/NSIS"
+          sh scripts/build-windows.sh
+          echo "BANYAN_PDFIUM=$(cygpath -w "$RUNNER_TEMP/banyan-pdfium/x/bin/pdfium.dll")" >> "$GITHUB_ENV"
+      - name: Vet
+        run: GOWORK=off go vet ./...
+      - name: Print spooler and Microsoft Print to PDF
+        shell: pwsh
+        run: |
+          Set-Service -Name Spooler -StartupType Automatic
+          Start-Service -Name Spooler
+          if (-not (Get-Printer -Name 'Microsoft Print to PDF' -ErrorAction SilentlyContinue)) {
+            Enable-WindowsOptionalFeature -Online -FeatureName Printing-PrintToPDFServices-Features -All -NoRestart
+          }
+          Get-Printer | Format-Table Name, DriverName, PortName, PrinterStatus
+      # Someone using Edge must not stop a cheque being drawn.
+      - name: Edge open in the background
+        shell: pwsh
+        run: Start-Process msedge -ArgumentList 'about:blank'
+      - uses: actions/download-artifact@v4
+        with:
+          name: mac-probes
+          path: ${{ runner.temp }}/mac-probes
+      - name: Probes
+        run: |
+          mkdir -p "$RUNNER_TEMP/win-probes"
+          BANYAN_KEEP_RENDER="$(cygpath -w "$RUNNER_TEMP/win-probes")" GOWORK=off go test ./internal/render -run TestKeepProbes -count=1 -v
+      - name: Test
+        run: |
+          export BANYAN_MAC_RENDER="$(cygpath -w "$RUNNER_TEMP/mac-probes")"
+          export BANYAN_WIN_RENDER="$(cygpath -w "$RUNNER_TEMP/win-probes")"
+          export BANYAN_SPOOL_TEST=1
+          GOWORK=off go test ./internal/printing -count=1 -v
+          GOWORK=off go test ./... -count=1
+      - name: The app starts and draws a cheque
+        shell: pwsh
+        run: |
+          $data = Join-Path $env:RUNNER_TEMP 'app-data'
+          $page = Join-Path $env:RUNNER_TEMP 'page.html'
+          $pdf = Join-Path $env:RUNNER_TEMP 'page.pdf'
+          New-Item -ItemType Directory -Force $data | Out-Null
+          Set-Content $page '<!doctype html><style>@page{size:92mm 204mm;margin:0}body{margin:0}</style><div style="position:absolute;left:10mm;top:10mm;width:50mm;height:1mm;background:#000"></div>'
+          $env:BANYAN_DATA_DIR = $data
+          $env:BANYAN_RENDER_CHECK = "${page};${pdf}"
+          $p = Start-Process dist/windows/Banyan.exe -PassThru
+          if (-not $p.WaitForExit(120000)) { $p.Kill(); throw 'the app did not finish its render check' }
+          if (-not (Test-Path $pdf)) { throw 'the app drew no PDF' }
+          Get-Item $pdf | Format-List Name, Length
+          if (-not (Test-Path (Join-Path $data 'cheque-calibration.json'))) { throw 'the app made no data folder' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: banyan-windows
+          path: |
+            dist/Banyan-windows-x64-setup.exe
+            ${{ runner.temp }}/win-probes
+          if-no-files-found: error
 
   # The Banyan server is a Go program that runs on Linux, so it is tested there:
   # keys, the register's revisions, members' reports, and a desk syncing with it.

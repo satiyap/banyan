@@ -7,6 +7,23 @@
  * and the register row says how the server's copy stands.
  */
 (function () {
+  // The words here are written for a Mac. On Windows the desk is "this
+  // computer", put right as the words appear, server messages included.
+  if (/Windows/.test(navigator.userAgent)) {
+    const fix = (node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = node.nodeValue.replace(/\b([Tt])his Mac\b/g, '$1his computer');
+        if (text !== node.nodeValue) node.nodeValue = text;
+        return;
+      }
+      node.childNodes.forEach(fix);
+    };
+    fix(document.body);
+    new MutationObserver((changes) => changes.forEach((c) => {
+      if (c.type === 'characterData') fix(c.target);
+      else c.addedNodes.forEach(fix);
+    })).observe(document.body, { subtree: true, childList: true, characterData: true });
+  }
   const version = (document.querySelector('meta[name="desk-version"]') || {}).content || '';
   const el = (id) => document.getElementById(id);
   let now = null;        // the last answer from /api/connection

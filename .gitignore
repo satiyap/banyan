@@ -47,3 +47,6 @@ apple-app-password*
 *-password
 *password*.txt
 update-signing-key
+
+# The Windows resource (icon, version) made during a Windows build.
+cmd/banyan/rsrc_windows_*.syso

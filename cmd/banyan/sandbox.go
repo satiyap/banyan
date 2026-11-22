@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -46,6 +47,9 @@ func realHome() (string, error) {
 // direct download uses it too once it holds a register, so a Mac that moved
 // between the two builds still has one register, never two.
 func containerData() string {
+	if runtime.GOOS != "darwin" {
+		return ""
+	}
 	home, err := realHome()
 	if err != nil {
 		return ""

@@ -83,6 +83,8 @@ func TestMain(m *testing.M) {
 	os.Setenv("TZ", fixture.text("tz"))
 	time.Local = zone
 	printing.SetPrintingDisabled(true)
+	// Recorded with no print system; Windows always has its spooler.
+	printing.HideSystem(true)
 	printing.Run = func(cmd string, args []string, timeout time.Duration) (printing.Completed, error) {
 		panic("a test tried to run the print-system command " + cmd)
 	}

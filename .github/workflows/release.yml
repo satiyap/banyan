@@ -1,10 +1,11 @@
 # A release of the desktop app: `pnpm release 2.1.0` sets the version, tags
 # v2.1.0 and pushes; this builds the Go app (cmd/banyan, Wails 3) for Mac
-# (Apple silicon) and publishes one GitHub release holding
-# Banyan-mac-arm64.dmg and update.json, only once the build and its checks
-# have worked. Neither link ever changes:
-#   releases/latest/download/Banyan-mac-arm64.dmg   (the site's download)
-#   releases/latest/download/update.json           (what installed apps check)
+# (Apple silicon) and Windows (x64) and publishes one GitHub release holding
+# Banyan-mac-arm64.dmg, update.json and Banyan-windows-x64-setup.exe, only
+# once the builds and their checks have worked. No link ever changes:
+#   releases/latest/download/Banyan-mac-arm64.dmg          (the site's download)
+#   releases/latest/download/Banyan-windows-x64-setup.exe  (the Windows download)
+#   releases/latest/download/update.json                  (what installed Macs check)
 #
 # Running it by hand (Actions → Release → Run workflow) only builds: the disk
 # image is attached to the run and nothing is published.
@@ -137,9 +138,49 @@ jobs:
             dist/update.json
           if-no-files-found: error
 
-  # Only a pushed tag publishes, and only once the build worked; a run by hand never does.
+  # The Windows installer, from the same tag and the same code. The desk's
+  # recorded answers are replayed with Edge as the renderer before it is built.
+  # It is not code-signed: Windows SmartScreen warns the first time it is run.
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: The version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = push ] && [ "${{ github.ref_type }}" = tag ]; then
+            v="${GITHUB_REF_NAME#v}"
+            test "$v" = "$(node -p "require('./package.json').version")"
+          else
+            v="$(node -p "require('./package.json').version")-dev"
+          fi
+          echo "$v" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-dev)?$'
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - name: Test
+        run: GOWORK=off go test ./...
+      - name: Build
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          command -v makensis || choco install nsis -y --no-progress
+          export PATH="$PATH:/c/Program Files (x86)/NSIS"
+          sh scripts/build-windows.sh
+          test -s dist/Banyan-windows-x64-setup.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: banyan-windows
+          path: dist/Banyan-windows-x64-setup.exe
+          if-no-files-found: error
+
+  # Only a pushed tag publishes, and only once both builds worked; a run by hand never does.
   publish:
-    needs: build
+    needs: [build, windows]
     if: github.event_name == 'push' && github.ref_type == 'tag'
     runs-on: ubuntu-latest
     steps:
@@ -157,6 +198,9 @@ jobs:
           if [ "$SIGNED" != true ]; then
             note="This build is not signed with an Apple Developer ID. macOS blocks it the first time: open it once, then go to System Settings ▸ Privacy & Security and choose Open Anyway."
           fi
+          note="$note
+
+          Windows: Banyan-windows-x64-setup.exe installs for the signed-in user. It is not code-signed, so Windows SmartScreen warns the first time: choose More info, then Run anyway. It needs Microsoft Edge, which Windows 10 and 11 include. Print the plain-paper test and check it against a leaf before printing a real cheque from Windows."
           gh release create "${{ github.ref_name }}" files/* --repo "${{ github.repository }}" \
             --title "Banyan ${GITHUB_REF_NAME#v}" --generate-notes --notes "$note" --latest
 

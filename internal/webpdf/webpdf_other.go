@@ -1,4 +1,4 @@
-//go:build !darwin
+//go:build !darwin && !windows
 
 // Package webpdf renders HTML to PDF with the Mac's own WebKit. Off the Mac
 // there is no renderer, and every call says so.

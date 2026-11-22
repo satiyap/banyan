@@ -154,3 +154,42 @@ func TestReportRenders(t *testing.T) {
 		_ = os.WriteFile(filepath.Join(keep, "report.pdf"), data, 0o644)
 	}
 }
+
+// One page per field, each with that field alone, and the whole cheque. With
+// BANYAN_KEEP_RENDER set they are kept there, so a run on another system can
+// measure its own renderer against these field by field (the Windows build
+// is checked against the Mac's this way).
+var probes = map[string]map[string]any{
+	"date":     {"cheque_date": "2026-08-12"},
+	"payee":    {"payee": "Wjgqy Wjgqy Wjgqy"},
+	"words":    {"amount_words": "WJGQY WJGQY"},
+	"amount":   {"amount_figures": "1,00,000.73/-"},
+	"crossing": {"crossing": true},
+	"cheque":   cheque,
+}
+
+func TestKeepProbes(t *testing.T) {
+	keep := os.Getenv("BANYAN_KEEP_RENDER")
+	if keep == "" {
+		t.Skip("BANYAN_KEEP_RENDER is not set")
+	}
+	if !webpdf.Available {
+		t.Skip("no renderer on this system")
+	}
+	cal, err := calibration.Load(filepath.Join(root, "cheque-calibration.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, fields := range probes {
+		page := map[string]any{
+			"payee": "", "cheque_date": "", "amount_words": "", "amount_figures": "",
+			"crossing": false, "strike_order": false, "star_fill": false, "test_pattern": false,
+		}
+		for k, v := range fields {
+			page[k] = v
+		}
+		if _, err := renderer().RenderPDF(cal, page, filepath.Join(keep, "probe-"+name+".pdf"), false); err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+	}
+}

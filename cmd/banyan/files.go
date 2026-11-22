@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -52,7 +51,8 @@ func files(desk http.Handler, p paths, pageTitle func(string), up shellUpdate) h
 		}
 		// Settings and the desk ask whether the app may use the local network.
 		// POST checks by trying it, which is also what makes macOS ask.
-		if r.URL.Path == "/shell/permissions" && (r.Method == http.MethodGet || r.Method == http.MethodPost) {
+		// Windows has no such permission, so there the page is told nothing and leaves the panel away.
+		if hasLocalNetworkPermission && r.URL.Path == "/shell/permissions" && (r.Method == http.MethodGet || r.Method == http.MethodPost) {
 			state, at := printing.LocalNetworkState()
 			if r.Method == http.MethodPost {
 				state = printing.CheckLocalNetwork()
@@ -72,8 +72,8 @@ func files(desk http.Handler, p paths, pageTitle func(string), up shellUpdate) h
 		}
 		// Opens System Settings at Privacy & Security > Local Network. After a
 		// refusal macOS never asks again, so this is the only way back.
-		if r.Method == http.MethodPost && r.URL.Path == "/shell/permissions/open" {
-			if err := exec.Command("open", "x-apple.systempreferences:com.apple.preference.security?Privacy_LocalNetwork").Run(); err != nil {
+		if hasLocalNetworkPermission && r.Method == http.MethodPost && r.URL.Path == "/shell/permissions/open" {
+			if err := openNetworkSettings(); err != nil {
 				http.Error(w, "System Settings could not be opened", http.StatusBadGateway)
 				return
 			}
@@ -114,7 +114,7 @@ func files(desk http.Handler, p paths, pageTitle func(string), up shellUpdate) h
 			if err == nil {
 				file := filepath.Join(dir, name)
 				if os.WriteFile(file, body, 0o600) == nil {
-					_ = exec.Command("/usr/bin/open", file).Start()
+					openFile(file)
 				}
 			}
 			w.WriteHeader(http.StatusNoContent)

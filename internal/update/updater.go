@@ -17,7 +17,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 )
 
@@ -330,7 +329,7 @@ func (u *Updater) Swap() error {
 	// A session of its own. When an app macOS launched exits, launchd kills
 	// what is left in its process group; in the app's group the helper died
 	// between moving the new app in and opening it.
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	detach(cmd)
 	if err := cmd.Start(); err != nil {
 		u.set(func(s *State) { s.Status, s.Error = StatusError, "The new app couldn't be swapped in: "+err.Error() })
 		return err
