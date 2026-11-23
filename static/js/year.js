@@ -358,10 +358,11 @@ function incomePanel(Q) {
   const tip = h('div.viz-tip', { hidden: true, role: 'tooltip' });
   const charts = rows.length ? incomeCharts(rows, tip) : null;
   const legend = h('ul.ring-legend.income-legend',
-    h('li', h('i', { style: { background: INCOME_COLOUR } }), h('span', 'Income')),
-    h('li', h('i', { style: { background: SPENT_COLOUR } }), h('span', 'Expense')),
-    h('li', h('i.is-projected-swatch'), h('span', 'Projected')),
-    h('li', h('i', { style: { background: 'var(--ink)' } }), h('span', 'Surplus or deficit since the start')));
+    h('li', h('i.is-line', { style: { background: INCOME_COLOUR } }), h('span', 'Income, running total')),
+    h('li', h('i.is-line', { style: { background: SPENT_COLOUR } }), h('span', 'Expense, running total')),
+    h('li', h('i.is-dash'), h('span', 'Projected')),
+    h('li', h('i.is-surplus'), h('span', 'Surplus')),
+    h('li', h('i.is-deficit'), h('span', 'Deficit')));
   // A projected figure says how much of it is in.
   const cell = (p, inSoFar, projected) => h('td.mono.num' + (projected ? '.is-projected' : ''), money(p),
     projected ? h('span.sub', inSoFar ? ` projected · ${money(inSoFar)} in` : ' projected') : null);
@@ -378,9 +379,10 @@ function incomePanel(Q) {
     h('p.foot', 'Expense is the cheques written, plus any other expense. Solid is in; dashed is projected. ₹ lakh.'));
 }
 
-/* Two charts on one row of quarters: income against expense, then the
-   surplus or deficit it adds up to since the start. Projected values are
-   outlined, not filled, and the line goes dashed where it is projected. */
+/* Running totals since the start: income and expense, the gap between them
+   shaded as surplus or deficit. Solid is what is in, up to today; dashed is
+   projected to the end of the year. Where expense crosses above income the
+   shading turns to deficit. */
 function incomeCharts(rows, tip) {
   const ns = 'http://www.w3.org/2000/svg';
   const el = (name, attrs, text) => {
@@ -389,86 +391,115 @@ function incomeCharts(rows, tip) {
     if (text != null) n.textContent = text;
     return n;
   };
-  const W = 1000, padL = 48, padR = 12, slot = (W - padL - padR) / rows.length;
+  const W = 1000, H = 300, padL = 48, padR = 150, top = 18, base = H - 30;
+  const n = rows.length, slot = (W - padL - padR) / n;
+  const xAt = k => padL + slot * k;                       // k = 0 is the start, k = n the end of the last quarter
   const lakh = p => (p / 1e7).toFixed(1);
-  const x = i => padL + slot * i + slot / 2;
-  const axis = (svg, y0, y1, ticks, scale) => ticks.forEach(t => {
-    const y = scale(t);
-    svg.appendChild(el('line', { x1: padL, x2: W - padR, y1: y, y2: y, class: t === 0 ? 'ic-zero' : 'ic-grid' }));
-    svg.appendChild(el('text', { x: padL - 6, y: y + 4, 'text-anchor': 'end', class: 'ic-tick' }, lakh(t)));
-  });
-  // Up to the next half-step of its order of magnitude: ₹29.8L tops out at 30, not 50.
-  const nice = m => { const unit = Math.pow(10, Math.floor(Math.log10(m || 1))) / 2; return Math.ceil((m || 1) / unit) * unit; };
+  const nice = m => { const unit = Math.pow(10, Math.floor(Math.log10(m || 1))) / 5; return Math.ceil((m || 1) / unit) * unit; };
 
-  // Top: income and expense side by side for each quarter.
-  const H1 = 200, top1 = 16, base1 = H1 - 28;
-  const max1 = nice(Math.max(1, ...rows.map(r => Math.max(r.income, r.expense))));
-  const y1 = p => base1 - (p / max1) * (base1 - top1);
-  const svg1 = el('svg', { viewBox: `0 0 ${W} ${H1}`, class: 'ic-chart', role: 'img', 'aria-label': 'Income and expense by quarter' });
-  axis(svg1, top1, base1, [0, max1 / 2, max1], y1);
-  const bw = Math.min(28, slot / 4);
+  // One set of points for both lines and the gap: the running totals of what
+  // is in, quarter by quarter up to today, then the projection to the end.
+  // Today sits inside the current quarter, as far along as the calendar is.
+  const today = todayISO();
+  const elapsed = r => {
+    const q = r.quarter, startMonth = [4, 7, 10, 1][q - 1], year = q === 4 ? r.fy + 1 : r.fy;
+    const from = new Date(year, startMonth - 1, 1), to = new Date(year, startMonth + 2, 1), now = new Date(today + 'T12:00:00');
+    return Math.min(1, Math.max(0, (now - from) / (to - from)));
+  };
+  const pts = [{ k: 0, x: xAt(0), inc: 0, exp: 0 }];
+  let inc = 0, exp = 0, split = null;
   rows.forEach((r, i) => {
-    // What is real is filled; a projection is the dashed outline above it.
-    [[r.income, r.incomeIn, INCOME_COLOUR, -1], [r.expense, r.expenseIn, SPENT_COLOUR, 1]].forEach(([p, real, c, side]) => {
-      if (!p) return;
-      const bx = x(i) + (side < 0 ? -bw - 1 : 1), by = y1(p);
-      if (real < p) svg1.appendChild(el('rect', { x: bx + 0.75, y: by + 0.75, width: bw - 1.5, height: Math.max(0, base1 - by - 0.75), rx: 3,
-        fill: 'none', stroke: c, 'stroke-width': 1.5, 'stroke-dasharray': '4 3' }));
-      if (real > 0) {
-        const ry = y1(real);
-        svg1.appendChild(el('rect', { x: bx, y: ry, width: bw, height: Math.max(0, base1 - ry), rx: 3, fill: c }));
+    const open = r.current || r.future || r.incomeProjected || r.expenseProjected;
+    if (open && split === null) {
+      split = pts.length - 1;
+      if (r.current) {
+        pts.push({ x: xAt(i) + slot * elapsed(r), inc: inc + r.incomeIn, exp: exp + r.expenseIn, now: true });
+        split = pts.length - 1;
       }
-      svg1.appendChild(el('text', { x: bx + bw / 2, y: by - 4, 'text-anchor': 'middle', class: 'ic-val' }, lakh(p)));
-    });
-    svg1.appendChild(el('text', { x: x(i), y: H1 - 8, 'text-anchor': 'middle', class: 'ic-label' + (r.current ? ' is-now' : '') },
+    }
+    inc += r.income; exp += r.expense;
+    pts.push({ k: i + 1, x: xAt(i + 1), inc, exp });
+  });
+  if (split === null) split = pts.length - 1;
+  const max = nice(Math.max(1, ...pts.map(p => Math.max(p.inc, p.exp))));
+  const y = p => base - (p / max) * (base - top);
+  const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'ic-chart', role: 'img',
+    'aria-label': 'Running totals of income and expense since the start, with the surplus or deficit between them; the table below has the figures' });
+
+  [0, max / 2, max].forEach(t => {
+    svg.appendChild(el('line', { x1: padL, x2: W - padR, y1: y(t), y2: y(t), class: t === 0 ? 'ic-zero' : 'ic-grid' }));
+    svg.appendChild(el('text', { x: padL - 6, y: y(t) + 4, 'text-anchor': 'end', class: 'ic-tick' }, lakh(t)));
+  });
+  rows.forEach((r, i) => {
+    svg.appendChild(el('line', { x1: xAt(i + 1), x2: xAt(i + 1), y1: base, y2: base + 4, class: 'ic-zero' }));
+    svg.appendChild(el('text', { x: xAt(i) + slot / 2, y: H - 10, 'text-anchor': 'middle', class: 'ic-label' + (r.current ? ' is-now' : '') },
       `Q${r.quarter} ${String(r.fy).slice(2)}–${String(r.fy + 1).slice(2)}${r.current ? ' · now' : ''}`));
   });
 
-  // Bottom: the surplus or deficit since the start, one point a quarter.
-  const H2 = 130, top2 = 22, bot2 = H2 - 22;
-  // Zero is always on the scale; below it only if there is a deficit to show.
-  const hi = Math.max(0, ...rows.map(r => r.sinceStart)), lo = Math.min(0, ...rows.map(r => r.sinceStart));
-  const upper = hi > 0 ? nice(hi) : 0, lower = lo < 0 ? -nice(-lo) : 0;
-  const span = (upper - lower) || 1;
-  const y2 = p => top2 + (upper - p) / span * (bot2 - top2);
-  const svg2 = el('svg', { viewBox: `0 0 ${W} ${H2}`, class: 'ic-chart', role: 'img', 'aria-label': 'Surplus or deficit since the start, by quarter' });
-  axis(svg2, top2, bot2, [lower, 0, upper].filter((t, k, a) => a.indexOf(t) === k), y2);
-  const pts = [[padL, y2(0)]].concat(rows.map((r, i) => [x(i), y2(r.sinceStart)]));
-  const firstProj = rows.findIndex(r => r.projected);
-  const solidTo = firstProj < 0 ? pts.length : firstProj + 1;   // pts has the start in front
-  const path = (from, to, dashed) => {
-    if (to - from < 2) return;
-    svg2.appendChild(el('polyline', { points: pts.slice(from, to).map(p => p.join(',')).join(' '), fill: 'none', class: 'ic-line' + (dashed ? ' is-projected' : '') }));
+  // The gap between the lines, split where they cross.
+  const shade = (a, b, projected) => {
+    const surplus = (a.inc - a.exp) + (b.inc - b.exp) >= 0;
+    svg.appendChild(el('polygon', { points: [[a.x, y(a.inc)], [b.x, y(b.inc)], [b.x, y(b.exp)], [a.x, y(a.exp)]].map(p => p.join(',')).join(' '),
+      class: 'ic-gap ' + (surplus ? 'is-surplus' : 'is-deficit') + (projected ? ' is-projected' : '') }));
   };
-  path(0, solidTo, false);
-  path(solidTo - 1, pts.length, true);
-  rows.forEach((r, i) => {
-    const [cx, cy] = pts[i + 1];
-    svg2.appendChild(el('circle', { cx, cy, r: 4.5, class: 'ic-dot' + (r.projected ? ' is-projected' : '') + (r.sinceStart < 0 ? ' is-over' : '') }));
-    svg2.appendChild(el('text', { x: cx, y: r.sinceStart < 0 ? cy + 16 : cy - 9, 'text-anchor': 'middle', class: 'ic-val' + (r.sinceStart < 0 ? ' is-over' : '') },
-      (r.sinceStart < 0 ? '−' : '+') + lakh(Math.abs(r.sinceStart))));
-  });
+  for (let j = 1; j < pts.length; j++) {
+    const a = pts[j - 1], b = pts[j], d1 = a.inc - a.exp, d2 = b.inc - b.exp, projected = j > split;
+    if (d1 * d2 < 0) {
+      const t = d1 / (d1 - d2), c = { x: a.x + (b.x - a.x) * t, inc: a.inc + (b.inc - a.inc) * t };
+      c.exp = c.inc;
+      shade(a, c, projected); shade(c, b, projected);
+    } else shade(a, b, projected);
+  }
 
-  // One hover target per quarter, over both charts.
+  const series = (key, colour) => {
+    const line = (list, extra) => { if (list.length > 1) svg.appendChild(el('polyline', { points: list.map(p => [p.x, y(p[key])].join(',')).join(' '), fill: 'none', stroke: colour, class: 'ic-run' + extra })); };
+    line(pts.slice(0, split + 1), '');
+    line(pts.slice(split), ' is-projected');
+    pts.forEach((p, j) => {
+      if (!j) return;
+      if (p.now) svg.appendChild(el('circle', { cx: p.x, cy: y(p[key]), r: 4.5, fill: colour, class: 'ic-now-dot' }));
+      else svg.appendChild(el('circle', { cx: p.x, cy: y(p[key]), r: 3, stroke: colour, class: 'ic-q-dot' + (j > split ? ' is-projected' : '') }));
+    });
+    return y(pts[pts.length - 1][key]);
+  };
+  const yi = series('inc', INCOME_COLOUR), ye = series('exp', SPENT_COLOUR);
+  const endInc = pts[pts.length - 1].inc, endExp = pts[pts.length - 1].exp;
+  const nowPt = pts.find(p => p.now);
+  if (nowPt) svg.appendChild(el('text', { x: nowPt.x, y: top - 4, 'text-anchor': 'middle', class: 'ic-tick' }, 'today'));
+  if (nowPt) svg.appendChild(el('line', { x1: nowPt.x, x2: nowPt.x, y1: top, y2: base, class: 'ic-today' }));
+
+  // Direct labels at the end, kept apart if the lines finish close together.
+  const projectedEnd = rows.some(r => r.projected);
+  let li = yi, le = ye;
+  if (Math.abs(li - le) < 30) { const mid = (li + le) / 2, up = li < le ? -1 : 1; li = mid + up * 15; le = mid - up * 15; }
+  const endX = xAt(n) + 8;
+  svg.appendChild(el('text', { x: endX, y: li + 4, class: 'ic-end' }, `Income ${lakh(endInc)}`));
+  svg.appendChild(el('text', { x: endX, y: le + 4, class: 'ic-end' }, `Expense ${lakh(endExp)}`));
+  const gap = endInc - endExp;
+  svg.appendChild(el('text', { x: endX, y: Math.max(li, le) + 24, class: 'ic-end ' + (gap < 0 ? 'is-over' : 'is-good') },
+    `${gap < 0 ? 'Deficit' : 'Surplus'} ${lakh(Math.abs(gap))}${projectedEnd ? ' projected' : ''}`));
+
+  // One hover target per quarter.
   const hits = h('div.ic-hits');
   rows.forEach((r, i) => {
-    const hit = h('div.ic-hit', { style: { left: ((padL + slot * i) / W * 100) + '%', width: (slot / W * 100) + '%' } });
+    const hit = h('div.ic-hit', { style: { left: (xAt(i) / W * 100) + '%', width: (slot / W * 100) + '%' } });
     hit.addEventListener('mouseenter', () => {
       const line = (label, colour, total, sofar, projected) => h('div.tip-row', h('i', { style: { background: colour } }),
         h('span', label + (projected ? (sofar ? `, ${rupees(sofar, { whole: true })} in` : ', projected') : '')), h('span.mono', rupees(total, { whole: true })));
+      const end = pts.find(p => p.k === i + 1), since = end.inc - end.exp;
       clear(tip, h('div.strong', r.label + (r.current ? ' · now' : '')),
         line('Income', INCOME_COLOUR, r.income, r.incomeIn, r.incomeProjected),
         line('Expense', SPENT_COLOUR, r.expense, r.expenseIn, r.expenseProjected),
-        h('div.tip-row', h('span'), h('span', 'Net'), h('span.mono', (r.net < 0 ? '−' : '+') + rupees(Math.abs(r.net), { whole: true }))),
+        h('div.tip-row', h('span'), h('span', since < 0 ? 'Deficit since the start' : 'Surplus since the start'), h('span.mono', rupees(Math.abs(since), { whole: true }))),
         h('div.tip-row', h('span'), h('span', 'Balance'), h('span.mono', rupees(r.balance, { whole: true }))));
       tip.hidden = false;
       const b = hit.getBoundingClientRect(), pr = hit.closest('.income-panel').getBoundingClientRect();
-      Object.assign(tip.style, { left: (b.left - pr.left + b.width / 2) + 'px', top: (b.top - pr.top + 140) + 'px' });
+      Object.assign(tip.style, { left: (b.left - pr.left + b.width / 2) + 'px', top: (b.top - pr.top + 90) + 'px' });
     });
     hit.addEventListener('mouseleave', () => { tip.hidden = true; });
     hits.appendChild(hit);
   });
-  return h('div.ic-wrap', h('div.ic-caption', 'Each quarter'), svg1, h('div.ic-caption', 'Surplus or deficit since the start'), svg2, hits);
+  return h('div.ic-wrap', svg, h('div.ic-hits-wrap', hits));
 }
 
 /* The quarters that can be entered: after the starting point, up to now. */
