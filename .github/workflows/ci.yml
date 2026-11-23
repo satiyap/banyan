@@ -26,9 +26,9 @@ jobs:
   test:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -42,8 +42,8 @@ jobs:
   desk:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
       - name: Vet
@@ -58,7 +58,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/mac-probes"
           BANYAN_KEEP_RENDER="$RUNNER_TEMP/mac-probes" GOWORK=off go test ./internal/render -run TestKeepProbes -count=1
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: mac-probes
           path: ${{ runner.temp }}/mac-probes
@@ -75,8 +75,8 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
       - name: Build
@@ -100,7 +100,7 @@ jobs:
       - name: Edge open in the background
         shell: pwsh
         run: Start-Process msedge -ArgumentList 'about:blank'
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: mac-probes
           path: ${{ runner.temp }}/mac-probes
@@ -148,7 +148,7 @@ jobs:
           $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
           $bmp.Save((Join-Path $out 'banyan-windows.png'))
           Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: banyan-windows
           path: |
@@ -164,8 +164,8 @@ jobs:
     env:
       CGO_ENABLED: '0'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
       - name: Vet

@@ -37,8 +37,8 @@ jobs:
     outputs:
       signed: ${{ steps.sign.outputs.signed }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
       - name: The version
@@ -130,7 +130,7 @@ jobs:
           GOWORK=off go run ./cmd/updatesign -version "$VERSION" -dmg dist/Banyan-mac-arm64.dmg \
             -notes "$RUNNER_TEMP/notes.txt" -out dist/update.json
           cat dist/update.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: banyan-mac
           path: |
@@ -147,8 +147,8 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
       - name: The version
@@ -172,7 +172,7 @@ jobs:
           export PATH="$PATH:/c/Program Files (x86)/NSIS"
           sh scripts/build-windows.sh
           test -s dist/Banyan-windows-x64-setup.exe
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: banyan-windows
           path: dist/Banyan-windows-x64-setup.exe
@@ -184,7 +184,7 @@ jobs:
     if: github.event_name == 'push' && github.ref_type == 'tag'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           path: files
           merge-multiple: true
@@ -217,8 +217,8 @@ jobs:
     if: github.event_name == 'push' && github.ref_type == 'tag'
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
       - name: Secrets
