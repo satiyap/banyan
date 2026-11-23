@@ -2,6 +2,13 @@
 
 What each release of the Banyan desktop app does. The full history is in the git log.
 
+## 2.6.4 — 2026-11-23
+
+- The Year report shows income and expense as running totals: solid to today, projected to the year's end, the gap shaded as surplus or deficit.
+- Income not yet in is projected at the usual quarter's, expense at the average of the finished quarters.
+- Enter each year's audited accumulated fund; the report shows whether the year adds to it or eats into it.
+- Plainer labels: income and expense.
+
 ## 2.6.3 — 2026-11-23
 
 - The Year report shows income against spending for each quarter, with the balance it leaves; members see it too.
