@@ -4,25 +4,22 @@ What each release of the Banyan desktop app does. The full history is in the git
 
 ## 2.6.4 — 2026-11-23
 
-- The Year report shows income and expense as running totals: solid to today, projected to the year's end, the gap shaded as surplus or deficit.
-- Income not yet in is projected at the usual quarter's, expense at the average of the finished quarters.
-- Enter each year's audited accumulated fund; the report shows whether the year adds to it or eats into it.
-- Plainer labels: income and expense.
+- Year: income vs expense chart, with a projection to year end.
+- Year: enter the accumulated fund and see if the year adds to it or uses it.
 
 ## 2.6.3 — 2026-11-23
 
-- The Year report shows income against spending for each quarter, with the balance it leaves; members see it too.
-- Enter each quarter's maintenance income, and any spending outside the register, from the Year report; spending otherwise comes from the cheques written.
+- Year: enter income for each quarter.
 
 ## 2.6.2 — 2026-11-23
 
-- The Year report's bars show each entity's and category's share of the period, so together they make one full bar.
+- Year: bars now add up to the whole.
 
 ## 2.6.1 — 2026-11-23
 
-- The Print button turns on as soon as the printer comes back online, without leaving the Tray.
-- Adding an entity to the tray from the Desk clears the search and puts the cursor back in it.
-- The Year report's ledger keeps Entities and Categories; the Largest and Printed payee tabs are gone.
+- Print button turns on when the printer comes back.
+- Adding to the tray clears the search.
+- Year: removed the Largest and Printed payee tabs.
 
 ## 2.6.0 — 2026-11-23
 
