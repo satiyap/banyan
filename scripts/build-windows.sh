@@ -21,7 +21,10 @@ out=dist/windows
 rm -rf "$out" && mkdir -p "$out"
 
 # PDFium, checked twice: the archive, then the DLL the app will load.
-cache="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/banyan-pdfium"
+# A Windows path (D:\a\_temp) is turned into /d/a/_temp: tar reads "D:" as a host.
+tmp="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
+command -v cygpath >/dev/null 2>&1 && tmp="$(cygpath -u "$tmp")"
+cache="$tmp/banyan-pdfium"
 mkdir -p "$cache"
 if [ ! -f "$cache/pdfium-win-x64.tgz" ] || ! echo "$pdfium_tgz_sha256  $cache/pdfium-win-x64.tgz" | sha256sum -c - >/dev/null 2>&1; then
   curl -fsSL -o "$cache/pdfium-win-x64.tgz" \

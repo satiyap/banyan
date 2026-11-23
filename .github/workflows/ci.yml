@@ -130,12 +130,31 @@ jobs:
           if (-not (Test-Path $pdf)) { throw 'the app drew no PDF' }
           Get-Item $pdf | Format-List Name, Length
           if (-not (Test-Path (Join-Path $data 'cheque-calibration.json'))) { throw 'the app made no data folder' }
+      # A picture of the app's window on the runner's desktop, for a look at
+      # the Windows app without a Windows computer. Not a test.
+      - name: Screenshot of the app
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $env:BANYAN_DATA_DIR = Join-Path $env:RUNNER_TEMP 'shot-data'
+          $out = Join-Path $env:RUNNER_TEMP 'screens'
+          New-Item -ItemType Directory -Force $env:BANYAN_DATA_DIR, $out | Out-Null
+          $p = Start-Process dist/windows/Banyan.exe -PassThru
+          Start-Sleep -Seconds 25
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+          $g = [System.Drawing.Graphics]::FromImage($bmp)
+          $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+          $bmp.Save((Join-Path $out 'banyan-windows.png'))
+          Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
       - uses: actions/upload-artifact@v4
         with:
           name: banyan-windows
           path: |
             dist/Banyan-windows-x64-setup.exe
             ${{ runner.temp }}/win-probes
+            ${{ runner.temp }}/screens
           if-no-files-found: error
 
   # The Banyan server is a Go program that runs on Linux, so it is tested there:
