@@ -424,6 +424,12 @@ function toggleSel(id) {
   updateDock();
 }
 
+/* After adding one entity to the tray, the search is cleared and ready for the next name. */
+function focusEntitySearch() {
+  const box = $('.ent-panel input[type=search]');
+  if (box) box.focus();
+}
+
 /* Everyone the association pays, including those with no rhythm yet. */
 function entityTable(desk) {
   const box = h('section.panel.ent-panel');
@@ -481,7 +487,7 @@ function entityRow(e) {
     h('div.row-acts',
       h('button.btn.btn-quiet.btn-xs', { type: 'button', onclick: () => writeInTray({ entity: e }) }, 'Write'),
       h('button.btn.btn-quiet.btn-xs', { type: 'button', disabled: inTray, title: inTray ? 'Already in the tray' : 'Add to the tray',
-        onclick: () => { addToTray([e]); rerender(); } }, inTray ? 'In tray' : '+ Tray'),
+        onclick: () => { addToTray([e]); DeskView.filter = ''; rerender(); focusEntitySearch(); } }, inTray ? 'In tray' : '+ Tray'),
       h('button.btn-link', { type: 'button', onclick: () => editEntity(e) }, 'edit')));
 }
 

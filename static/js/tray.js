@@ -211,6 +211,9 @@ function moveKeys(ev, i) {
 let trayQuietTimer;
 function saveTrayQuiet() { State.dirty = true; clearTimeout(trayQuietTimer); trayQuietTimer = setTimeout(() => { store(TRAY_KEY, State.tray); updateDock(); }, 250); }
 function paintFootQuiet() { const f = $('.grid-foot'); if (f) f.replaceWith(gridFoot()); }
+// The printer is re-checked every 30s and on focus; the print buttons follow
+// it. Only a change repaints, so the first-leaf box keeps focus otherwise.
+on('health', () => { const f = $('.grid-foot'); if (f && f.dataset.blocked !== healthBlocksPrint()) paintFootQuiet(); });
 const paintLeafQuiet = debounce(() => paintStage({ leafOnly: true }), 120);
 
 /* What the print path would say about this row: shown in its Check cell. */
@@ -759,7 +762,7 @@ function gridFoot() {
   const one = rows.length === 1;
   const blocked = healthBlocksPrint();
   const allOk = rows.length && rows.slice(0, fits).every(d => d._ok);
-  return h('div.grid-foot',
+  return h('div.grid-foot', { dataset: { blocked } },
     h('div',
       h('div.strong', rows.length ? `${plural(rows.length, 'cheque')} · ${rupees(total, { always: true })}${pdc ? ` · ${pdc} post-dated` : ''}` : 'No cheques'),
       h('div.sub', leavesText, glance && rows.length ? ` ${plural(glance, 'row needs', 'rows need')} a glance.` : '')),

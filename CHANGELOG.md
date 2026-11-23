@@ -2,6 +2,12 @@
 
 What each release of the Banyan desktop app does. The full history is in the git log.
 
+## 2.6.1 — 2026-11-23
+
+- The Print button turns on as soon as the printer comes back online, without leaving the Tray.
+- Adding an entity to the tray from the Desk clears the search and puts the cursor back in it.
+- The Year report's ledger keeps Entities and Categories; the Largest and Printed payee tabs are gone.
+
 ## 2.6.0 — 2026-11-23
 
 - Banyan for Windows 10 and 11 (64-bit): writes, prints and logs cheques from a Windows PC.

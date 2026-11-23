@@ -236,10 +236,10 @@ function ledgerPanel(d, colour) {
   const P = YearPage;
   const q = new URLSearchParams({ fy: String(d.fy) });
   if (d.quarter) q.set('quarter', String(d.quarter));
-  const csvKind = { entities: 'entities', heads: 'categories', payees: 'payees', largest: 'cheques' }[P.tab];
-  const tabs = seg('Ledger', [['entities', 'Entities'], ['heads', 'Categories'], ['payees', 'Printed payee'], ['largest', 'Largest']], P.tab,
+  const csvKind = { entities: 'entities', heads: 'categories' }[P.tab];
+  const tabs = seg('Ledger', [['entities', 'Entities'], ['heads', 'Categories']], P.tab,
     v => { P.tab = v; const panel = $('.ledger'); panel.replaceWith(ledgerPanel(d, colour)); hydrateIcons($('.ledger')); });
-  const max = Math.max(1, ...d.entities.map(e => e.paise), ...d.categories.map(c => c.paise), ...d.payees.map(p => p.paise));
+  const max = Math.max(1, ...d.entities.map(e => e.paise), ...d.categories.map(c => c.paise));
   const vs = (now, before) => {
     if (!before) return h('span.sub', now ? 'new' : '');
     const pct = Math.round((now - before) / before * 100);
@@ -268,7 +268,7 @@ function ledgerPanel(d, colour) {
           h('button.btn.btn-quiet.btn-xs', { type: 'button', onclick: () => Annotate.entity(ent, ctx) }, 'Change category or note')),
         leafDrill(mine, ctx, true)], d, colour);
     });
-  } else if (P.tab === 'heads') {
+  } else {
     rows = d.categories.map(c => {
       const cells = name => [
         h('div.strong', h('i.swatch', { style: { background: colour(c.category) } }), name || c.category),
@@ -278,24 +278,9 @@ function ledgerPanel(d, colour) {
       return drillRow('h' + c.category, '', btn => { btn.textContent = c.category; return cells(btn); },
         () => leafDrill(L.leaves.filter(l => l.head === c.category), ctx), d, colour);
     });
-  } else if (P.tab === 'payees') {
-    rows = d.payees.map(p => h('div.lrow',
-      h('div.strong', p.payee), h('div.sub', p.entities.join(', ')), h('div.sub', plural(p.count, 'cheque')), h('div.mono', `${(p.share * 100).toFixed(1)}%`),
-      bar(p.paise, 'var(--sel)'), h('div.mono.num', rupees(p.paise, { whole: true })), h('span')));
-  } else {
-    rows = d.largest.map(c => {
-      const leaf = L ? L.leaves.find(l => l.id === c.id) : null;
-      const cells = [
-        h('div', h('div.strong', c.entity_name, leaf ? noteMark(leaf.notes) : null), h('div.sub', c.payee !== c.entity_name ? c.payee : '')),
-        h('div.sub', c.category), h('div.mono', c.cheque_no || '—'), h('div.sub', fmtDay(c.cheque_date)),
-        bar(c.amount_paise, colour(c.category)), h('div.mono.num', rupees(c.amount_paise, { always: true })), h('div.sub', c.memo)];
-      if (!leaf) return h('a.lrow', { href: `#/register?leaf=${encodeURIComponent(c.cheque_no)}` }, cells);
-      return h('button.lrow.ann-row-button', { type: 'button', onclick: () => Annotate.leaf(leaf, ctx),
-        'aria-label': `Cheque ${c.cheque_no || ''}, ${c.entity_name}, ${rupees(c.amount_paise, { always: true })}. Change category or note` }, cells);
-    });
   }
   return h('section.panel.ledger',
-    h('div.panel-head', h('span.eyebrow', P.tab === 'payees' ? 'What each bank account received' : 'Who was paid'), tabs,
+    h('div.panel-head', h('span.eyebrow', 'Who was paid'), tabs,
       h('a.btn.btn-quiet.btn-xs', { href: `/api/reports/${csvKind}.csv?${q}`, download: '' }, 'CSV')),
     P.tab === 'heads' ? headsTable(d) : null,
     h('div.lrows', rows.length ? rows : h('p.empty', 'Nothing in this period.')),
