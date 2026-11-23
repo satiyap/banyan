@@ -2,6 +2,11 @@
 
 What each release of the Banyan desktop app does. The full history is in the git log.
 
+## 2.6.0 — 2026-11-23
+
+- Banyan for Windows 10 and 11 (64-bit): writes, prints and logs cheques from a Windows PC.
+- Windows prints straight to the printer at 92 × 204 mm and 100%, and refuses a printer that will not take that size.
+
 ## 2.5.0 — 2026-11-21
 
 - Ready for the Mac App Store: one register on a Mac, whichever build it runs.
