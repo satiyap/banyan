@@ -2,8 +2,8 @@
 # Build the Windows app and its installer: VERSION=2.1.0 sh scripts/build-windows.sh [exe|installer]
 #
 # With no argument it makes both. "exe" stops after Banyan.exe and "installer"
-# packs the dist/windows already there, so a release can have Banyan.exe
-# code-signed before it goes into the installer, and the installer after.
+# packs the dist/windows already there, so Banyan.exe can be signed before it
+# goes into the installer if releases are ever code-signed.
 #
 # Runs on Windows (Git Bash, as on GitHub's Windows runners). Produces
 #   dist/windows/Banyan.exe        the app, with pdfium.dll beside it

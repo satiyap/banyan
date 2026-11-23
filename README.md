@@ -242,16 +242,6 @@ A failing replay means behaviour changed. If the change is intended, update the 
 
 `pnpm release 2.1.0` sets the version in `package.json`, tags `v2.1.0` and pushes, and the tag builds and publishes the release. The workflow refuses a tag that doesn't match `package.json`. The latest disk image is always at `releases/latest/download/Banyan-mac-arm64.dmg`.
 
-### Code signing policy (Windows)
-
-Windows releases are code-signed through [SignPath](https://about.signpath.io) once the project is set up there: free code signing provided by SignPath.io, certificate by SignPath Foundation. Until then the Windows installer is unsigned.
-
-- **What is signed:** only `Banyan.exe` and `Banyan-windows-x64-setup.exe`, built by `release.yml` on GitHub-hosted runners from a `v*` tag of this repository. Nothing built on a personal computer is signed. `pdfium.dll` is a third-party build ([pdfium-binaries](https://github.com/bblanchon/pdfium-binaries)) and is shipped as published, pinned by SHA-256.
-- **Who:** the repository's owner ([@satiyap](https://github.com/satiyap)) is the only committer, reviewer and approver of releases. Each signing request is approved in SignPath.
-- **Privacy:** Banyan sends nothing anywhere unless the person using it asks it to. It talks to the printer it is told to use, and, only when connected with a key, to the Banyan server that key belongs to. The Windows app does not check for updates.
-
-The SignPath side lives in `build/windows/signpath/` (artifact configurations `exe` and `installer`). Signing switches on when the repository holds the `SIGNPATH_API_TOKEN` secret and the `SIGNPATH_ORGANIZATION_ID`, `SIGNPATH_PROJECT_SLUG` and `SIGNPATH_SIGNING_POLICY_SLUG` variables. A release whose signing fails is not published.
-
 ### Two builds: direct download and Mac App Store
 
 The same code makes two apps. `sh scripts/build-mac.sh` is the direct download: signed with a Developer ID, notarized, and updated by its own signed updater (below). `STORE=mas sh scripts/build-mac.sh` is the Mac App Store build, built with the `mas` tag into `dist/appstore/`:
