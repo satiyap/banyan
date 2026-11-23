@@ -647,6 +647,21 @@ textarea.paste { font-family: var(--data); font-size: 13px; margin-top: 10px; fo
 .ic-end { font: 500 13px var(--body); fill: var(--ink-2); font-variant-numeric: tabular-nums; }
 .ic-end.is-good { fill: var(--green-ink); }
 .ic-end.is-over { fill: var(--stamp); }
+.ic-year { fill: color-mix(in oklch, var(--ink) 3%, transparent); }
+.ic-hatch { stroke: color-mix(in oklch, var(--green) 45%, transparent); stroke-width: 1.5; }
+.ic-fund { stroke: none; }
+.ic-fund-edge { stroke: color-mix(in oklch, var(--green) 60%, transparent); stroke-width: 1; stroke-dasharray: 2 3; }
+.ic-fund-label { font: 500 12px var(--body); fill: var(--green-ink); paint-order: stroke; stroke: var(--panel); stroke-width: 3px; }
+.income-headline.is-over .strong { color: var(--stamp); }
+.fund-bar { margin: var(--space-sm) 0 var(--space-md); }
+.fund-bar-head { display: flex; justify-content: space-between; gap: var(--space-sm); flex-wrap: wrap; font-size: 13px; color: var(--ink-2); margin-bottom: var(--space-2xs); }
+.fund-track { display: flex; height: 14px; border-radius: 4px; background: var(--rule-soft); overflow: hidden; }
+.fund-track i { display: block; height: 100%; }
+.fund-kept { background: var(--ink-3); }
+.fund-added { background: var(--green); }
+.fund-used { background: var(--stamp); }
+.fund-track .is-projected { opacity: .55; background-image: repeating-linear-gradient(45deg, transparent 0 4px, color-mix(in oklch, var(--panel) 55%, transparent) 4px 7px); }
+.fund-bar-foot { margin-top: var(--space-2xs); }
 .ic-hits { position: absolute; inset: 0; pointer-events: none; }
 .ic-hit { position: absolute; top: 0; bottom: 0; pointer-events: auto; border-radius: var(--r); }
 .ic-hit:hover { background: color-mix(in oklch, var(--ink) 4%, transparent); }
@@ -656,6 +671,7 @@ textarea.paste { font-family: var(--data); font-size: 13px; margin-top: 10px; fo
 .income-legend i.is-dash { height: 0; border-top: 2px dashed var(--ink-3); background: none; }
 .income-legend i.is-surplus { background: color-mix(in oklch, var(--green) 28%, transparent); }
 .income-legend i.is-deficit { background: color-mix(in oklch, var(--stamp) 30%, transparent); }
+.income-legend i.is-fund { background: repeating-linear-gradient(45deg, transparent 0 3px, color-mix(in oklch, var(--green) 50%, transparent) 3px 5px); }
 .income-table tr.is-start td { color: var(--ink-3); }
 .income-table tr.is-current td { background: var(--amber-w); }
 .income-table tr.is-future td { color: var(--ink-2); }

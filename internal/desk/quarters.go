@@ -26,6 +26,10 @@ var (
 		named{"income", str(strOptions{max: 40})},
 		named{"outside", str(strOptions{def: def(""), max: 40})},
 	)
+	quarterFund = model(
+		named{"fy", integer(intOptions{ge: bound(2000), le: bound(2100)})},
+		named{"fund", str(strOptions{max: 40})},
+	)
 	quarterStart = model(
 		named{"fy", integer(intOptions{ge: bound(2000), le: bound(2100)})},
 		named{"quarter", integer(intOptions{ge: bound(1), le: bound(4)})},
@@ -150,7 +154,16 @@ func (a *App) quarters(rq *req) (*response, error) {
 			})
 		}
 	}
-	return ok(obj{{"start", startOut}, {"quarters", out}, {"current", obj{{"fy", now.fy}, {"quarter", now.quarter}, {"label", now.label()}}}})
+	funds, err := store.Funds()
+	if err != nil {
+		return nil, err
+	}
+	fundsOut := []obj{}
+	for _, f := range funds {
+		fundsOut = append(fundsOut, obj{{"fy", f.Fy}, {"label", reports.FyLabel(int(f.Fy))}, {"fund_paise", f.FundPaise}})
+	}
+	return ok(obj{{"start", startOut}, {"quarters", out}, {"funds", fundsOut},
+		{"current", obj{{"fy", now.fy}, {"quarter", now.quarter}, {"label", now.label()}}}})
 }
 
 // The quarter being set must have happened: no figures for a quarter yet to come.
@@ -207,4 +220,36 @@ func (a *App) setQuarterStart(rq *req) (*response, error) {
 		return nil, err
 	}
 	return ok(obj{{"fy", k.fy}, {"quarter", k.quarter}, {"changed", changed}})
+}
+
+// setFund records the accumulated fund at 31 March of a year that has ended,
+// from its audited balance sheet. It may be negative.
+func (a *App) setFund(rq *req) (*response, error) {
+	v := rq.body(quarterFund)
+	if err := rq.check(); err != nil {
+		return nil, err
+	}
+	fy := v.int("fy")
+	now, err := a.currentQuarter()
+	if err != nil {
+		return nil, err
+	}
+	if fy >= now.fy {
+		return nil, refuse(http.StatusUnprocessableEntity, reports.FyLabel(int(fy))+" has not ended yet.")
+	}
+	text := strings.TrimSpace(v.str("fund"))
+	negative := strings.HasPrefix(text, "-") || strings.HasPrefix(text, "−")
+	text = strings.TrimLeft(text, "-−")
+	fund, err := paiseOrNothing(text)
+	if err != nil {
+		return nil, refuse(http.StatusUnprocessableEntity, "Accumulated fund: "+message(err))
+	}
+	if negative {
+		fund = -fund
+	}
+	changed, err := db.QuartersOf(a.db).SetFund(fy, fund)
+	if err != nil {
+		return nil, err
+	}
+	return ok(obj{{"fy", fy}, {"changed", changed}})
 }

@@ -150,6 +150,26 @@ func TestQuarterlyIncomeAndBalance(t *testing.T) {
 			t.Errorf("%s events: %v, want %v", subject, got, kinds)
 		}
 	}
+	// The accumulated fund: a year that has ended only, negative allowed, an event each change.
+	if code, _ := post("/api/quarters/fund", `{"fy":2026,"fund":"1"}`); code != 422 {
+		t.Errorf("the year in progress: %d", code)
+	}
+	if code, body := post("/api/quarters/fund", `{"fy":2025,"fund":"60,00,000"}`); code != 200 {
+		t.Fatalf("fund: %d %s", code, body)
+	}
+	if _, err := os.Stat(cfg.DBPath + ".pre-funds"); err != nil {
+		t.Errorf("no copy of the register was taken before the funds table was added")
+	}
+	if code, _ := post("/api/quarters/fund", `{"fy":2024,"fund":"-1,000"}`); code != 200 {
+		t.Errorf("a negative fund: %d", code)
+	}
+	funds := read().items("funds")
+	if len(funds) != 2 || funds[1].(obj).value("fund_paise").(float64) != 6_000_000_00 || funds[0].(obj).value("fund_paise").(float64) != -1_000_00 {
+		t.Errorf("funds: %v", funds)
+	}
+	if events, _ := app.db.EventsAbout("fund:2025"); len(events) != 1 || events[0].Kind != "fund-set" {
+		t.Errorf("fund events: %v", events)
+	}
 	if _, err := os.Stat(filepath.Join(folder, "register.db")); err != nil {
 		t.Fatal(err)
 	}

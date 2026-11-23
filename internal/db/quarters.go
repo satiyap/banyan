@@ -211,3 +211,86 @@ func money(paise int64) string {
 	}
 	return text
 }
+
+// fundsTable is created the first time an accumulated fund is saved, like
+// the quarters table.
+const fundsTable = `-- The accumulated fund at 31 March of each financial year (fy is the start
+-- year: 2025 is the fund at 31 March 2026), typed in from the audited
+-- balance sheet. The year's income and expense are measured against it: a
+-- year whose expense runs over its income is eating into it.
+CREATE TABLE IF NOT EXISTS funds (
+    fy         INTEGER PRIMARY KEY,
+    fund_paise INTEGER NOT NULL,
+    updated_at TEXT    NOT NULL
+);
+`
+
+// FundRow is one year's accumulated fund at 31 March.
+type FundRow struct {
+	Fy        int64  `json:"fy"`
+	FundPaise int64  `json:"fund_paise"`
+	UpdatedAt string `json:"updated_at"`
+}
+
+// FundSubject is what a year's fund events are about: 'fund:2025'.
+func FundSubject(fy int64) string { return "fund:" + strconv.FormatInt(fy, 10) }
+
+func hasFunds(con *conn) (bool, error) {
+	row, err := con.get("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'funds'")
+	return row != nil, err
+}
+
+// Funds is every year's accumulated fund, oldest first. Reading never creates
+// the table.
+func (q *Quarters) Funds() ([]FundRow, error) {
+	return connect(q.d, func(con *conn) ([]FundRow, error) {
+		if has, err := hasFunds(con); err != nil || !has {
+			return []FundRow{}, err
+		}
+		return list[FundRow](con, "SELECT * FROM funds ORDER BY fy")
+	})
+}
+
+// SetFund records a year's accumulated fund, with an event when it changed.
+// The first time, a copy of the register is taken beside it.
+func (q *Quarters) SetFund(fy, fundPaise int64) (changed bool, err error) {
+	has, err := connect(q.d, hasFunds)
+	if err != nil {
+		return false, err
+	}
+	if !has {
+		backup := q.d.backupPath("pre-funds")
+		if !exists(backup) {
+			if err := q.d.do(func(con *conn) error { return q.d.backupTo(con, backup) }); err != nil {
+				return false, err
+			}
+		}
+		if err := q.d.do(func(con *conn) error { return con.exec(fundsTable) }); err != nil {
+			return false, err
+		}
+	}
+	return connect(q.d, func(con *conn) (bool, error) {
+		was, err := one[FundRow](con, "SELECT * FROM funds WHERE fy = ?", fy)
+		if err != nil {
+			return false, err
+		}
+		if was != nil && was.FundPaise == fundPaise {
+			return false, nil
+		}
+		now := q.d.utcnow()
+		if _, err := con.run(
+			"INSERT INTO funds (fy, fund_paise, updated_at) VALUES (?,?,?) "+
+				"ON CONFLICT (fy) DO UPDATE SET fund_paise = excluded.fund_paise, updated_at = excluded.updated_at",
+			fy, fundPaise, now,
+		); err != nil {
+			return false, err
+		}
+		detail := "accumulated fund at 31 March " + strconv.FormatInt(fy+1, 10) + ": " + money(fundPaise)
+		if was != nil {
+			detail = "accumulated fund at 31 March " + strconv.FormatInt(fy+1, 10) + ": " + money(was.FundPaise) + " → " + money(fundPaise)
+		}
+		_, err = con.run("INSERT INTO events (cheque_id, kind, detail, at, subject) VALUES (?,?,?,?,?)",
+			nil, "fund-set", detail, now, FundSubject(fy))
+		return err == nil, err
+	})
+}

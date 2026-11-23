@@ -337,11 +337,54 @@ function projectQuarters(Q) {
   });
 }
 
+/* The year in view against the accumulated fund it started with (the
+   audited fund at 31 March of the year before): what it added, or what it
+   took from the fund. Null without that fund or that year's quarters. */
+function yearAgainstFund(Q, rows, fy) {
+  const fund = (Q.funds || []).find(f => f.fy === fy - 1);
+  const mine = rows.filter(r => r.fy === fy);
+  if (!fund || !mine.length) return null;
+  const income = mine.reduce((s, r) => s + r.income, 0), expense = mine.reduce((s, r) => s + r.expense, 0);
+  return { fy, label: `FY ${fy}–${String(fy + 1).slice(2)}`, opening: fund.fund_paise, income, expense, net: income - expense,
+    closing: fund.fund_paise + income - expense, projected: mine.some(r => r.projected) };
+}
+
+function fundHeadline(y) {
+  // Always in lakh, so one sentence never mixes crore and lakh.
+  const L = p => `₹${(Math.abs(p) / 1e7).toFixed(1)} lakh`, proj = y.projected ? ' (projected)' : '';
+  if (y.net >= 0) return h('p.income-headline',
+    h('span.strong', `${y.label}: income covers expense.`),
+    ` Income ${L(y.income)}, expense ${L(y.expense)}${proj}: ${L(y.net)} added to the accumulated fund, ${L(y.opening)} → ${L(y.closing)}.`);
+  const share = y.opening > 0 ? Math.round(-y.net / y.opening * 100) : null;
+  return h('p.income-headline.is-over',
+    h('span.strong', `${y.label}: expense runs ${L(y.net)} over income${proj}.`),
+    ` ${share != null ? `${share}% of the ${L(y.opening)} accumulated fund used` : 'Taken from the accumulated fund'}, leaving ${y.closing < 0 ? '−' : ''}${L(y.closing)}.`);
+}
+
+/* The fund at 1 April, then at 31 March: grown by the year's surplus, or cut
+   back by its deficit. One scale for both. */
+function fundBar(y) {
+  const max = Math.max(1, y.opening, y.closing);
+  const pct = p => (Math.max(0, p) / max * 100) + '%';
+  const L = p => `${p < 0 ? '−' : ''}₹${(Math.abs(p) / 1e7).toFixed(1)} lakh`;
+  const base = Math.min(y.opening, y.closing);
+  return h('div.fund-bar',
+    h('div.fund-bar-head', h('span', 'Accumulated fund'),
+      h('span.mono', `1 April ${y.fy}: ${L(y.opening)} → 31 March ${y.fy + 1}: ${L(y.closing)}${y.projected ? ' projected' : ''}`)),
+    h('div.fund-track', { role: 'img', 'aria-label': `Accumulated fund ${L(y.opening)} at the start of ${y.label}, ${L(y.closing)} at its end` },
+      h('i.fund-kept', { style: { width: pct(base) } }),
+      y.net >= 0
+        ? h('i.fund-added' + (y.projected ? '.is-projected' : ''), { style: { width: pct(y.net) } })
+        : h('i.fund-used' + (y.projected ? '.is-projected' : ''), { style: { width: pct(y.opening - Math.max(0, y.closing)) } })),
+    h('div.fund-bar-foot', h('span.sub', y.net >= 0 ? `+${L(y.net)} this year` : `${L(y.net)} this year`)));
+}
+
 function incomePanel(Q) {
   if (!Q) return null;
   const edit = deskCanEnter();
   const tools = edit ? h('div.btn-row',
     Q.start ? h('button.btn.btn-quiet.btn-xs', { type: 'button', onclick: () => enterQuarter(Q) }, 'Enter a quarter…') : null,
+    h('button.btn.btn-quiet.btn-xs', { type: 'button', onclick: () => enterFund(Q) }, 'Accumulated fund…'),
     h('button.btn.btn-quiet.btn-xs', { type: 'button', onclick: () => enterStart(Q) }, Q.start ? 'Starting balance…' : 'Set a starting balance…')) : null;
   const head = h('div.panel-head', h('span.eyebrow', 'Income and expense'), tools);
   if (!Q.start) {
@@ -352,17 +395,21 @@ function incomePanel(Q) {
   const money = p => rupees(p, { whole: true });
   const signed = p => (p < 0 ? '−' : '+') + money(Math.abs(p));
   const end = rows[rows.length - 1];
-  const headline = end ? h('p.income-headline',
+  // The year in the FY picker, against the fund it started with.
+  const fy = YearPage.fy;
+  const year = yearAgainstFund(Q, rows, fy);
+  const headline = year ? fundHeadline(year) : end ? h('p.income-headline',
     h('span.strong', `${end.sinceStart < 0 ? 'Deficit' : 'Surplus'} of ${lakhs(Math.abs(end.sinceStart), true)}`),
     ` by the end of ${end.label}${rows.some(r => r.projected) ? ', projected' : ''}: balance ${lakhs(end.balance, true)}, from ${lakhs(Q.start.closing_paise, true)} at the start.`) : null;
   const tip = h('div.viz-tip', { hidden: true, role: 'tooltip' });
-  const charts = rows.length ? incomeCharts(rows, tip) : null;
+  const charts = rows.length ? incomeCharts(rows, tip, year) : null;
   const legend = h('ul.ring-legend.income-legend',
     h('li', h('i.is-line', { style: { background: INCOME_COLOUR } }), h('span', 'Income, running total')),
     h('li', h('i.is-line', { style: { background: SPENT_COLOUR } }), h('span', 'Expense, running total')),
     h('li', h('i.is-dash'), h('span', 'Projected')),
     h('li', h('i.is-surplus'), h('span', 'Surplus')),
-    h('li', h('i.is-deficit'), h('span', 'Deficit')));
+    h('li', h('i.is-deficit'), h('span', 'Deficit')),
+    year ? h('li', h('i.is-fund'), h('span', `Accumulated fund at the start of ${year.label}`)) : null);
   // A projected figure says how much of it is in.
   const cell = (p, inSoFar, projected) => h('td.mono.num' + (projected ? '.is-projected' : ''), money(p),
     projected ? h('span.sub', inSoFar ? ` projected · ${money(inSoFar)} in` : ' projected') : null);
@@ -375,15 +422,15 @@ function incomePanel(Q) {
         cell(r.income, r.incomeIn, r.incomeProjected), cell(r.expense, r.expenseIn, r.expenseProjected),
         h('td.mono.num' + (r.net < 0 ? '.is-over' : ''), signed(r.net)),
         h('td.mono.num' + (r.projected ? '.is-projected' : ''), money(r.balance))))));
-  return h('section.panel.income-panel', head, headline, charts, rows.length ? legend : null, tip, table,
-    h('p.foot', 'Expense is the cheques written, plus any other expense. Solid is in; dashed is projected. ₹ lakh.'));
+  return h('section.panel.income-panel', head, headline, charts, rows.length ? legend : null, tip, year ? fundBar(year) : null, table,
+    h('p.foot', 'Expense is the cheques written, plus any other expense. Solid is in; dashed is projected. The accumulated fund is from the audited balance sheet. ₹ lakh.'));
 }
 
 /* Running totals since the start: income and expense, the gap between them
    shaded as surplus or deficit. Solid is what is in, up to today; dashed is
    projected to the end of the year. Where expense crosses above income the
    shading turns to deficit. */
-function incomeCharts(rows, tip) {
+function incomeCharts(rows, tip, year) {
   const ns = 'http://www.w3.org/2000/svg';
   const el = (name, attrs, text) => {
     const n = document.createElementNS(ns, name);
@@ -421,7 +468,19 @@ function incomeCharts(rows, tip) {
     pts.push({ k: i + 1, x: xAt(i + 1), inc, exp });
   });
   if (split === null) split = pts.length - 1;
-  const max = nice(Math.max(1, ...pts.map(p => Math.max(p.inc, p.exp))));
+
+  // The year in view, and the cushion above its income line: how far expense
+  // could run over income before the fund it started with is used up.
+  let band = null;
+  if (year) {
+    const i0 = rows.findIndex(r => r.fy === year.fy), i1 = rows.map(r => r.fy).lastIndexOf(year.fy);
+    const from = pts.findIndex(p => p.k === i0), to = pts.findIndex(p => p.k === i1 + 1);
+    if (from >= 0 && to > from && year.opening > 0) {
+      const carried = pts[from].inc - pts[from].exp;
+      band = pts.slice(from, to + 1).map(p => ({ x: p.x, inc: p.inc, top: p.inc - carried + year.opening }));
+    }
+  }
+  const max = nice(Math.max(1, ...pts.map(p => Math.max(p.inc, p.exp)), ...(band || []).map(b => b.top)));
   const y = p => base - (p / max) * (base - top);
   const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'ic-chart', role: 'img',
     'aria-label': 'Running totals of income and expense since the start, with the surplus or deficit between them; the table below has the figures' });
@@ -435,6 +494,22 @@ function incomeCharts(rows, tip) {
     svg.appendChild(el('text', { x: xAt(i) + slot / 2, y: H - 10, 'text-anchor': 'middle', class: 'ic-label' + (r.current ? ' is-now' : '') },
       `Q${r.quarter} ${String(r.fy).slice(2)}–${String(r.fy + 1).slice(2)}${r.current ? ' · now' : ''}`));
   });
+
+  if (band) {
+    const defs = el('defs');
+    const pat = el('pattern', { id: 'fundHatch', patternUnits: 'userSpaceOnUse', width: 7, height: 7, patternTransform: 'rotate(45)' });
+    pat.appendChild(el('line', { x1: 0, y1: 0, x2: 0, y2: 7, class: 'ic-hatch' }));
+    defs.appendChild(pat);
+    svg.appendChild(defs);
+    const first = band[0], last = band[band.length - 1];
+    svg.appendChild(el('rect', { x: first.x, y: top, width: last.x - first.x, height: base - top, class: 'ic-year' }));
+    svg.appendChild(el('polygon', { class: 'ic-fund', fill: 'url(#fundHatch)',
+      points: band.map(b => [b.x, y(b.inc)].join(',')).concat(band.slice().reverse().map(b => [b.x, y(b.top)].join(','))).join(' ') }));
+    svg.appendChild(el('polyline', { class: 'ic-fund-edge', fill: 'none', points: band.map(b => [b.x, y(b.top)].join(',')).join(' ') }));
+    const mid = band[Math.floor(band.length / 2)];
+    svg.appendChild(el('text', { x: mid.x, y: (y(mid.top) + y(mid.inc)) / 2 + 4, 'text-anchor': 'middle', class: 'ic-fund-label' },
+      `Accumulated fund ${(year.opening / 1e7).toFixed(1)}`));
+  }
 
   // The gap between the lines, split where they cross.
   const shade = (a, b, projected) => {
@@ -530,6 +605,37 @@ async function enterQuarter(Q) {
       const [fy, quarter] = pick.value.split('-').map(Number);
       try {
         await post('/api/quarters', { fy, quarter, income: income.value.trim(), outside: outside.value.trim() });
+        dlg.close('save');
+        toast('Saved.');
+        route();
+      } catch (e) { err.textContent = e.message; err.hidden = false; }
+    } }],
+  });
+}
+
+/* The accumulated fund at 31 March of a year that has ended, from its audited balance sheet. */
+async function enterFund(Q) {
+  const cur = Q.current.fy;
+  const years = [];
+  for (let fy = cur - 1; fy > cur - 8; fy--) years.push(fy);
+  const label = fy => `31 March ${fy + 1} (end of FY ${fy}–${String(fy + 1).slice(2)})`;
+  const pick = h('select', { 'aria-label': 'Year' }, years.map(fy => h('option', { value: String(fy) }, label(fy))));
+  const amount = h('input.mono', { type: 'text', inputmode: 'decimal', autocomplete: 'off' });
+  const fill = () => {
+    const f = (Q.funds || []).find(x => x.fy === Number(pick.value));
+    amount.value = f ? (f.fund_paise < 0 ? '-' : '') + plainAmount(Math.abs(f.fund_paise)) : '';
+  };
+  pick.addEventListener('change', fill);
+  fill();
+  const err = h('p.form-error', { hidden: true });
+  await modal({
+    eyebrow: 'Income and expense', title: 'Accumulated fund',
+    body: h('div', field('As at', pick), field('Accumulated fund', amount, 'From the audited balance sheet.'), err),
+    onOpen: () => amount.focus(),
+    actions: [{ label: 'Cancel', value: 'cancel' }, { label: 'Save', primary: true, value: 'save', onClick: async (ev, dlg) => {
+      ev.preventDefault();
+      try {
+        await post('/api/quarters/fund', { fy: Number(pick.value), fund: amount.value.trim() });
         dlg.close('save');
         toast('Saved.');
         route();
