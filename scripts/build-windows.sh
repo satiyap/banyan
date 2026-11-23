@@ -1,5 +1,9 @@
 #!/bin/sh
-# Build the Windows app and its installer: VERSION=2.1.0 sh scripts/build-windows.sh
+# Build the Windows app and its installer: VERSION=2.1.0 sh scripts/build-windows.sh [exe|installer]
+#
+# With no argument it makes both. "exe" stops after Banyan.exe and "installer"
+# packs the dist/windows already there, so a release can have Banyan.exe
+# code-signed before it goes into the installer, and the installer after.
 #
 # Runs on Windows (Git Bash, as on GitHub's Windows runners). Produces
 #   dist/windows/Banyan.exe        the app, with pdfium.dll beside it
@@ -10,14 +14,19 @@
 set -eu
 cd "$(dirname "$0")/.."
 
+stage="${1:-all}"
+case "$stage" in all|exe|installer) ;; *) echo "usage: sh scripts/build-windows.sh [exe|installer]" >&2; exit 1 ;; esac
 version="${VERSION:-$(node -p "require('./package.json').version")-dev}"
+numeric="$(echo "$version" | sed 's/-dev$//').0"
+out=dist/windows
+
+if [ "$stage" != installer ]; then
 pdfium_release="chromium/8111"
 pdfium_tgz_sha256="3452d11031050ec65e57f180215b57b9e6d465e3fbedafa8a77ad90885c7d23e"
 pdfium_dll_sha256="$(sed -n 's/.*pdfiumSHA256  *= *"\([0-9a-f]*\)".*/\1/p' internal/printing/pdfium_windows.go)"
 grep -q "PdfiumVersion = \"$pdfium_release\"" internal/printing/pdfium_windows.go \
   || { echo "pdfium release here and in pdfium_windows.go disagree" >&2; exit 1; }
 
-out=dist/windows
 rm -rf "$out" && mkdir -p "$out"
 
 # PDFium, checked twice: the archive, then the DLL the app will load.
@@ -41,7 +50,6 @@ cp "$cache/x/licenses/"* "$out/licenses/pdfium/"
 cp LICENSE "$out/licenses/Banyan-LICENSE.txt"
 
 # The icon and version go into the executable as a Windows resource.
-numeric="$(echo "$version" | sed 's/-dev$//').0"
 GOWORK=off go run github.com/tc-hib/go-winres@v0.3.3 simply \
   --arch amd64 --out cmd/banyan/rsrc \
   --icon build/windows/icon.ico --manifest gui \
@@ -54,7 +62,11 @@ GOWORK=off CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath \
   -ldflags "-H windowsgui -s -w -X main.version=$version" \
   -o "$out/Banyan.exe" ./cmd/banyan
 ls -l "$out"
+rm -f cmd/banyan/rsrc_windows_amd64.syso
+fi
+[ "$stage" = exe ] && exit 0
 
+test -s "$out/Banyan.exe" || { echo "no $out/Banyan.exe to pack" >&2; exit 1; }
 if command -v makensis >/dev/null 2>&1; then
   makensis -V2 -DVERSION="$version" -DNUMERIC="$numeric" -DSOURCE="$(cd "$out" && pwd -W 2>/dev/null || pwd)" \
     -DOUTFILE="$(pwd -W 2>/dev/null || pwd)/dist/Banyan-windows-x64-setup.exe" build/windows/installer.nsi

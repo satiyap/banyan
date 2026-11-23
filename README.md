@@ -10,6 +10,7 @@
 <p align="center">
   <a href="https://satiyap.github.io/banyan/"><b>Website</b></a> ·
   <a href="https://github.com/satiyap/banyan/releases/latest/download/Banyan-mac-arm64.dmg"><b>Download for Mac</b></a> ·
+  <a href="https://github.com/satiyap/banyan/releases/latest/download/Banyan-windows-x64-setup.exe"><b>Download for Windows</b></a> ·
   <a href="https://github.com/satiyap/banyan/releases">Releases</a> ·
   <a href="CHANGELOG.md">Changelog</a> ·
   <a href="https://github.com/satiyap/banyan/issues">Issues</a>
@@ -39,7 +40,9 @@ The desk works without internet and without a server. The server is optional and
 
 Download **[Banyan-mac-arm64.dmg](https://github.com/satiyap/banyan/releases/latest/download/Banyan-mac-arm64.dmg)**. It needs a Mac with Apple silicon. The [website](https://satiyap.github.io/banyan/) walks through the screens and how to get started.
 
-From 2.2.1, releases are signed with an Apple Developer ID and notarized, so macOS opens them without a warning. Versions before that need **System Settings ▸ Privacy & Security ▸ Open Anyway** the first time.
+**Windows 10 and 11 (64-bit), from 2.6.0:** download **[Banyan-windows-x64-setup.exe](https://github.com/satiyap/banyan/releases/latest/download/Banyan-windows-x64-setup.exe)**. It installs for the signed-in user (no administrator needed), keeps the register in `%APPDATA%\Banyan`, and needs Microsoft Edge, which Windows includes. Windows has no self-updater yet: install a new version by running its installer. Until releases are code-signed, Windows SmartScreen warns the first time: choose **More info**, then **Run anyway**.
+
+From 2.2.1, Mac releases are signed with an Apple Developer ID and notarized, so macOS opens them without a warning. Versions before that need **System Settings ▸ Privacy & Security ▸ Open Anyway** the first time.
 
 The first time Banyan checks your printer, macOS asks whether it may find devices on your local network. Allow it, so Banyan can tell whether the printer is switched on. Printing works either way. **Settings ▸ Permissions** shows whether it's allowed, with a coloured dot, and opens System Settings if you need to change it.
 
@@ -235,9 +238,19 @@ A failing replay means behaviour changed. If the change is intended, update the 
 | --- | --- | --- |
 | `ci.yml` | A push to `main`, or a pull request that changes code. Changes to docs and `*.md` alone don't trigger it. | The Go app's tests on macOS, the server's on Linux, and the TypeScript reference's typecheck and unit tests. The Electron app is frozen and its end-to-end run is no longer in CI. |
 | `image.yml` | A push to `main` that changes something in the server image. | Builds `ghcr.io/satiyap/banyan` on a GitHub-hosted ARM64 runner. |
-| `release.yml` | A `v*` tag. | Runs the Go tests, builds the Go app (`scripts/build-mac.sh`) into `Banyan-mac-arm64.dmg`, signs `update.json` for installed apps, and publishes a GitHub release. |
+| `release.yml` | A `v*` tag. | Runs the Go tests, builds the Go app for the Mac (`scripts/build-mac.sh`) into `Banyan-mac-arm64.dmg` and for Windows (`scripts/build-windows.sh`) into `Banyan-windows-x64-setup.exe`, signs `update.json` for installed Macs, and publishes a GitHub release. |
 
 `pnpm release 2.1.0` sets the version in `package.json`, tags `v2.1.0` and pushes, and the tag builds and publishes the release. The workflow refuses a tag that doesn't match `package.json`. The latest disk image is always at `releases/latest/download/Banyan-mac-arm64.dmg`.
+
+### Code signing policy (Windows)
+
+Windows releases are code-signed through [SignPath](https://about.signpath.io) once the project is set up there: free code signing provided by SignPath.io, certificate by SignPath Foundation. Until then the Windows installer is unsigned.
+
+- **What is signed:** only `Banyan.exe` and `Banyan-windows-x64-setup.exe`, built by `release.yml` on GitHub-hosted runners from a `v*` tag of this repository. Nothing built on a personal computer is signed. `pdfium.dll` is a third-party build ([pdfium-binaries](https://github.com/bblanchon/pdfium-binaries)) and is shipped as published, pinned by SHA-256.
+- **Who:** the repository's owner ([@satiyap](https://github.com/satiyap)) is the only committer, reviewer and approver of releases. Each signing request is approved in SignPath.
+- **Privacy:** Banyan sends nothing anywhere unless the person using it asks it to. It talks to the printer it is told to use, and, only when connected with a key, to the Banyan server that key belongs to. The Windows app does not check for updates.
+
+The SignPath side lives in `build/windows/signpath/` (artifact configurations `exe` and `installer`). Signing switches on when the repository holds the `SIGNPATH_API_TOKEN` secret and the `SIGNPATH_ORGANIZATION_ID`, `SIGNPATH_PROJECT_SLUG` and `SIGNPATH_SIGNING_POLICY_SLUG` variables. A release whose signing fails is not published.
 
 ### Two builds: direct download and Mac App Store
 

@@ -141,8 +141,19 @@ jobs:
   # The Windows installer, from the same tag and the same code. The desk's
   # recorded answers are replayed with Edge as the renderer before it is built.
   # It is not code-signed: Windows SmartScreen warns the first time it is run.
+  #
+  # Code signing (SignPath) switches itself on once the repository holds the
+  # SIGNPATH_API_TOKEN secret and these repository variables:
+  #   SIGNPATH_ORGANIZATION_ID, SIGNPATH_PROJECT_SLUG, SIGNPATH_SIGNING_POLICY_SLUG
+  # with artifact configurations "exe" and "installer" in the SignPath project
+  # (build/windows/signpath/). Banyan.exe is signed before it is packed, the
+  # installer after; a release whose signing fails is not published.
   windows:
     runs-on: windows-latest
+    outputs:
+      signed: ${{ steps.signing.outputs.on }}
+    env:
+      SIGNPATH_TOKEN_SET: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
     defaults:
       run:
         shell: bash
@@ -164,14 +175,77 @@ jobs:
           echo "version=$v" >> "$GITHUB_OUTPUT"
       - name: Test
         run: GOWORK=off go test ./...
-      - name: Build
+      - name: Signing
+        id: signing
+        run: echo "on=$SIGNPATH_TOKEN_SET" >> "$GITHUB_OUTPUT"
+      - name: Build the app
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: sh scripts/build-windows.sh exe
+
+      - name: Hand Banyan.exe to SignPath
+        if: steps.signing.outputs.on == 'true'
+        id: unsigned-exe
+        uses: actions/upload-artifact@v6
+        with:
+          name: unsigned-exe
+          path: dist/windows/Banyan.exe
+          if-no-files-found: error
+      - name: Sign Banyan.exe
+        if: steps.signing.outputs.on == 'true'
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: exe
+          github-artifact-id: ${{ steps.unsigned-exe.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: dist/signed-exe
+      - name: Use the signed Banyan.exe
+        if: steps.signing.outputs.on == 'true'
+        run: cp dist/signed-exe/Banyan.exe dist/windows/Banyan.exe
+
+      - name: Build the installer
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           command -v makensis || choco install nsis -y --no-progress
           export PATH="$PATH:/c/Program Files (x86)/NSIS"
-          sh scripts/build-windows.sh
+          sh scripts/build-windows.sh installer
           test -s dist/Banyan-windows-x64-setup.exe
+
+      - name: Hand the installer to SignPath
+        if: steps.signing.outputs.on == 'true'
+        id: unsigned-installer
+        uses: actions/upload-artifact@v6
+        with:
+          name: unsigned-installer
+          path: dist/Banyan-windows-x64-setup.exe
+          if-no-files-found: error
+      - name: Sign the installer
+        if: steps.signing.outputs.on == 'true'
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: installer
+          github-artifact-id: ${{ steps.unsigned-installer.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: dist/signed-installer
+      - name: Check both signatures
+        if: steps.signing.outputs.on == 'true'
+        shell: pwsh
+        run: |
+          Copy-Item dist/signed-installer/Banyan-windows-x64-setup.exe dist/Banyan-windows-x64-setup.exe -Force
+          foreach ($f in 'dist/windows/Banyan.exe', 'dist/Banyan-windows-x64-setup.exe') {
+            $sig = Get-AuthenticodeSignature $f
+            "$f : $($sig.Status) $($sig.SignerCertificate.Subject)"
+            if ($sig.Status -ne 'Valid') { throw "$f is not validly signed" }
+          }
       - uses: actions/upload-artifact@v6
         with:
           name: banyan-windows
@@ -184,23 +258,32 @@ jobs:
     if: github.event_name == 'push' && github.ref_type == 'tag'
     runs-on: ubuntu-latest
     steps:
+      # Only the release's own artifacts: the run also holds the unsigned
+      # Windows files handed to SignPath, under the same file names.
       - uses: actions/download-artifact@v7
         with:
+          pattern: banyan-*
           path: files
           merge-multiple: true
       - name: Publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SIGNED: ${{ needs.build.outputs.signed }}
+          WINDOWS_SIGNED: ${{ needs.windows.outputs.signed }}
         run: |
           ls -la files
           note=""
           if [ "$SIGNED" != true ]; then
             note="This build is not signed with an Apple Developer ID. macOS blocks it the first time: open it once, then go to System Settings ▸ Privacy & Security and choose Open Anyway."
           fi
+          if [ "$WINDOWS_SIGNED" = true ]; then
+            winsign="It is code-signed; Windows SmartScreen may still warn until the signature has built up a reputation (choose More info, then Run anyway)."
+          else
+            winsign="It is not code-signed, so Windows SmartScreen warns the first time: choose More info, then Run anyway."
+          fi
           note="$note
 
-          Windows: Banyan-windows-x64-setup.exe installs for the signed-in user. It is not code-signed, so Windows SmartScreen warns the first time: choose More info, then Run anyway. It needs Microsoft Edge, which Windows 10 and 11 include. Print the plain-paper test and check it against a leaf before printing a real cheque from Windows."
+          Windows: Banyan-windows-x64-setup.exe installs for the signed-in user. $winsign It needs Microsoft Edge, which Windows 10 and 11 include. Print the plain-paper test and check it against a leaf before printing a real cheque from Windows."
           gh release create "${{ github.ref_name }}" files/* --repo "${{ github.repository }}" \
             --title "Banyan ${GITHUB_REF_NAME#v}" --generate-notes --notes "$note" --latest
 
