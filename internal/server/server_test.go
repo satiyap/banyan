@@ -390,6 +390,7 @@ func TestMembersSignInWithAKeyAndSeeReportsAndNothingElse(t *testing.T) {
 
 	want(t, "reports", w.get("/api/reports", page).status, 200)
 	want(t, "monthly", w.get("/api/reports/monthly", page).status, 200)
+	want(t, "quarterly income", w.get("/api/reports/quarters", page).status, 200)
 	want(t, "csv", w.get("/api/reports/entities.csv", cookie).status, 200)
 	want(t, "reader", string(w.get("/api/reader", cookie).body), `{"role":"read","latest":null}`)
 	want(t, "a stylesheet", w.get("/static/reader.css", nil).status, 200)
@@ -399,6 +400,7 @@ func TestMembersSignInWithAKeyAndSeeReportsAndNothingElse(t *testing.T) {
 		want(t, path, w.get(path, page).status, 404)
 	}
 	want(t, "writing", w.postJSON("/api/entities", map[string]string{"payee_name": "X"}, page).status, 404)
+	want(t, "writing income", w.postJSON("/api/quarters", map[string]string{"income": "1"}, page).status, 404)
 	want(t, "cookie as bearer", w.get("/api/v1/register", bearerOf(strings.Split(session.cookie, "=")[1])).status, 401)
 
 	// The cheque photo is never served, however it is asked for.

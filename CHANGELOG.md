@@ -2,6 +2,11 @@
 
 What each release of the Banyan desktop app does. The full history is in the git log.
 
+## 2.6.3 — 2026-11-23
+
+- The Year report shows income against spending for each quarter, with the balance it leaves; members see it too.
+- Enter each quarter's maintenance income, and any spending outside the register, from the Year report; spending otherwise comes from the cheques written.
+
 ## 2.6.2 — 2026-11-23
 
 - The Year report's bars show each entity's and category's share of the period, so together they make one full bar.

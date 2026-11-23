@@ -7,7 +7,7 @@
  */
 'use strict';
 
-const YearPage = { fy: null, quarter: null, tab: 'entities', fyData: null, data: null, leaves: null, open: new Set() };
+const YearPage = { fy: null, quarter: null, tab: 'entities', fyData: null, data: null, leaves: null, quarters: null, open: new Set() };
 
 /* Categorical slots in their validated order; heads past the seventh fold
    into Other, which is always grey. */
@@ -36,6 +36,8 @@ async function loadYear() {
   const lq = new URLSearchParams({ fy: String(P.fy) });
   if (P.quarter) lq.set('quarter', P.quarter);
   try { P.leaves = await api(`/api/reports/leaves?${lq}`); } catch (err) { P.leaves = null; }
+  // Quarterly income and balance; a server without it still shows the report.
+  try { P.quarters = await api('/api/reports/quarters'); } catch (err) { P.quarters = null; }
 }
 
 /* What the edit panel needs from this report. */
@@ -130,6 +132,7 @@ function paintYear(root) {
     h('div.year-top' + (dominantHead(d) ? '.is-single' : ''),
       dominantHead(d) ? null : ringPanel(d, colour),
       monthsPanel(fd, colour)),
+    incomePanel(P.quarters),
     ledgerPanel(d, colour));
 }
 
@@ -297,4 +300,135 @@ function headsTable(d) {
       c.columns.map(p => h('td.mono.num', money(p))), h('td.mono.num.strong', money(c.paise))))),
     h('tfoot', h('tr', h('th', 'Total'), d.column_totals.map(p => h('th.mono.num', money(p))),
       h('th.mono.num', money(d.totals.paise)))));
+}
+
+/* ------------------------------------------------------------- income */
+/* Maintenance received each quarter against what was spent, and the balance
+   it leaves. Income is typed in at the desk from the bank statements, one
+   figure a quarter; spending is the register's cheques by the date they were
+   written, plus anything spent outside the register. Members see the totals
+   only; the desk alone enters them. */
+const INCOME_COLOUR = '#2a6fb0', SPENT_COLOUR = '#a8503a';   // validated as a pair, light surface
+const deskCanEnter = () => typeof Places.tray !== 'undefined';
+
+function incomePanel(Q) {
+  if (!Q) return null;
+  const edit = deskCanEnter();
+  const tools = edit ? h('div.btn-row',
+    Q.start ? h('button.btn.btn-quiet.btn-xs', { type: 'button', onclick: () => enterQuarter(Q) }, 'Enter a quarter…') : null,
+    h('button.btn.btn-quiet.btn-xs', { type: 'button', onclick: () => enterStart(Q) }, Q.start ? 'Starting balance…' : 'Set a starting balance…')) : null;
+  const head = h('div.panel-head', h('span.eyebrow', 'Income and spending, quarter by quarter'), tools);
+  if (!Q.start) {
+    if (!edit) return null;
+    return h('section.panel.income-panel', head,
+      h('p.sub', 'Start from a quarter whose closing balance you know from the bank statement. Then enter each later quarter’s maintenance, and the balance follows from the cheques written.'));
+  }
+  const qs = Q.quarters;
+  const max = Math.max(1, ...qs.map(q => Math.max(q.income_paise, q.spent_paise)));
+  const tip = h('div.viz-tip', { hidden: true, role: 'tooltip' });
+  const groups = qs.map(q => {
+    const bar = (p, c, what) => h('div.ibar', h('span.mval.mono', p ? (p / 1e7).toFixed(1) : ''),
+      h('div.mtrack', h('i.ifill', { style: { height: (p / max * 100) + '%', background: c }, 'aria-hidden': 'true' })), h('span.visually-hidden', what));
+    const g = h('div.igroup' + (q.current ? '.is-current' : ''),
+      h('div.ipair', bar(q.entered ? q.income_paise : 0, INCOME_COLOUR, 'income'), bar(q.spent_paise, SPENT_COLOUR, 'spent')),
+      h('span.mlabel', `Q${q.quarter} ${String(q.fy).slice(2)}–${String(q.fy + 1).slice(2)}${q.current ? ' · now' : ''}`));
+    g.addEventListener('mouseenter', () => {
+      clear(tip, h('div.strong', q.label + (q.current ? ' · so far' : '')),
+        h('div.tip-row', h('i', { style: { background: INCOME_COLOUR } }), h('span', 'Income'), h('span.mono', q.entered ? rupees(q.income_paise, { whole: true }) : 'not entered')),
+        h('div.tip-row', h('i', { style: { background: SPENT_COLOUR } }), h('span', 'Spent'), h('span.mono', rupees(q.spent_paise, { whole: true }))),
+        h('div.tip-row', h('span'), h('span', 'Closing balance'), h('span.mono', rupees(q.closing_paise, { whole: true }))));
+      tip.hidden = false;
+      const r = g.getBoundingClientRect(), pr = g.closest('.income-panel').getBoundingClientRect();
+      Object.assign(tip.style, { left: (r.left - pr.left + r.width / 2) + 'px', top: (r.top - pr.top) + 'px' });
+    });
+    g.addEventListener('mouseleave', () => { tip.hidden = true; });
+    return g;
+  });
+  const legend = h('ul.ring-legend.income-legend',
+    h('li', h('i', { style: { background: INCOME_COLOUR } }), h('span', 'Maintenance received'), h('span')),
+    h('li', h('i', { style: { background: SPENT_COLOUR } }), h('span', 'Spent: cheques written, and anything outside the register'), h('span')));
+  const money = p => rupees(p, { whole: true });
+  const net = q => h('td.mono.num' + (q.net_paise < 0 ? '.is-over' : ''), (q.net_paise < 0 ? '−' : '+') + money(Math.abs(q.net_paise)));
+  const table = h('table.head-table.income-table',
+    h('thead', h('tr', h('th', 'Quarter'), h('th.num', 'Income'), h('th.num', 'Spent'), h('th.num', 'Income less spent'), h('th.num', 'Closing balance'))),
+    h('tbody',
+      h('tr.is-start', h('td', `${Q.start.label} · starting balance`), h('td'), h('td'), h('td'), h('td.mono.num', money(Q.start.closing_paise))),
+      qs.map(q => h('tr' + (q.current ? '.is-current' : ''),
+        h('td', q.label, q.current ? h('span.sub', ' · so far') : null),
+        h('td.mono.num', q.entered ? money(q.income_paise) : h('span.sub', 'not entered')),
+        h('td.mono.num', money(q.spent_paise)), net(q), h('td.mono.num', money(q.closing_paise))))));
+  return h('section.panel.income-panel', head,
+    qs.length ? [h('div.igroups', { role: 'img', 'aria-label': 'Income and spending by quarter; the table below has the figures' }, groups), legend, tip] : null,
+    table,
+    h('p.foot', 'Income is maintenance received, entered from the bank statements. Spending is the register’s cheques by the date they were written, void and misprinted ones left out, plus anything entered as spent outside the register. The balance runs forward from the starting quarter’s closing balance at the bank. ₹ lakh on the bars.'));
+}
+
+/* The quarters that can be entered: after the starting point, up to now. */
+async function enterQuarter(Q) {
+  const pick = h('select', { 'aria-label': 'Quarter' }, Q.quarters.slice().reverse().map(q =>
+    h('option', { value: `${q.fy}-${q.quarter}` }, q.label + (q.entered ? '' : ' · not entered'))));
+  const income = h('input.mono', { type: 'text', inputmode: 'decimal', autocomplete: 'off' });
+  const outside = h('input.mono', { type: 'text', inputmode: 'decimal', autocomplete: 'off' });
+  const note = h('p.field-note');
+  const fill = () => {
+    const q = Q.quarters.find(x => `${x.fy}-${x.quarter}` === pick.value);
+    income.value = q && q.entered ? plainAmount(q.income_paise) : '';
+    outside.value = q && q.outside_paise ? plainAmount(q.outside_paise) : '';
+    note.textContent = q ? `The register has ${rupees(q.register_paise, { whole: true })} of cheques written in ${q.label}.` : '';
+  };
+  pick.addEventListener('change', fill);
+  fill();
+  const err = h('p.form-error', { hidden: true });
+  await modal({
+    eyebrow: 'Income and spending', title: 'Enter a quarter',
+    body: h('div', field('Quarter', pick, note),
+      field('Maintenance received', income, 'From the bank statement: the quarter’s maintenance credits.'),
+      field('Spent outside the register', outside, 'Anything paid in the quarter without a cheque in the register, such as before the register was kept. Usually nothing.'),
+      err),
+    onOpen: () => income.focus(),
+    actions: [{ label: 'Cancel', value: 'cancel' }, { label: 'Save', primary: true, value: 'save', onClick: async (ev, dlg) => {
+      ev.preventDefault();
+      const [fy, quarter] = pick.value.split('-').map(Number);
+      try {
+        await post('/api/quarters', { fy, quarter, income: income.value.trim(), outside: outside.value.trim() });
+        dlg.close('save');
+        toast('Saved.');
+        route();
+      } catch (e) { err.textContent = e.message; err.hidden = false; }
+    } }],
+  });
+}
+
+/* The starting point: one quarter's closing balance at the bank. */
+async function enterStart(Q) {
+  const cur = Q.current;
+  const options = [];
+  for (let fy = cur.fy, q = cur.quarter, n = 0; n < 12; n++) {
+    options.push([fy, q]);
+    if (--q === 0) { q = 4; fy--; }
+  }
+  // With no starting point yet, last year's Q4: the year's books start from its close.
+  const at = Q.start ? `${Q.start.fy}-${Q.start.quarter}` : `${cur.fy - 1}-4`;
+  const label = (fy, q) => `Q${q} FY ${fy}–${String(fy + 1).slice(2)}`;
+  const pick = h('select', { 'aria-label': 'Starting quarter' }, options.map(([fy, q]) =>
+    h('option', { value: `${fy}-${q}`, selected: `${fy}-${q}` === at }, label(fy, q))));
+  const closing = h('input.mono', { type: 'text', inputmode: 'decimal', autocomplete: 'off',
+    value: Q.start ? plainAmount(Q.start.closing_paise) : '' });
+  const err = h('p.form-error', { hidden: true });
+  await modal({
+    eyebrow: 'Income and spending', title: 'Starting balance',
+    body: h('div', field('Quarter', pick, 'The last quarter before the ones you will enter.'),
+      field('Closing balance', closing, 'The bank statement’s balance at the end of that quarter.'), err),
+    onOpen: () => closing.focus(),
+    actions: [{ label: 'Cancel', value: 'cancel' }, { label: 'Save', primary: true, value: 'save', onClick: async (ev, dlg) => {
+      ev.preventDefault();
+      const [fy, quarter] = pick.value.split('-').map(Number);
+      try {
+        await post('/api/quarters/start', { fy, quarter, closing: closing.value.trim() });
+        dlg.close('save');
+        toast('Starting balance saved.');
+        route();
+      } catch (e) { err.textContent = e.message; err.hidden = false; }
+    } }],
+  });
 }

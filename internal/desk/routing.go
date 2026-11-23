@@ -348,6 +348,9 @@ func (a *App) routeTable() []route {
 
 		get("/api/reports/leaves", a.leaves),
 		post("/api/annotations", a.annotateRoute),
+		get("/api/reports/quarters", a.quarters),
+		post("/api/quarters", a.setQuarter),
+		post("/api/quarters/start", a.setQuarterStart),
 		get("/api/reports/monthly", a.monthlyReport),
 		get("/api/reports/monthly.pdf", a.monthlyReportPDF),
 		get("/api/reports", a.report),

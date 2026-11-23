@@ -79,6 +79,8 @@ var readerAPI = []*regexp.Regexp{
 	regexp.MustCompile(`^/api/reports/[a-z]+\.csv$`),
 	// Every leaf of a period with its head and note, so a member can change them.
 	regexp.MustCompile(`^/api/reports/leaves$`),
+	// Each quarter's income, spending and closing balance: totals, typed in at the desk.
+	regexp.MustCompile(`^/api/reports/quarters$`),
 }
 
 func readerMay(p string) bool {
