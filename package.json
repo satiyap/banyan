@@ -1,7 +1,7 @@
 {
   "name": "banyan",
   "productName": "Banyan",
-  "version": "2.6.3",
+  "version": "2.6.4",
   "private": true,
   "license": "Apache-2.0",
   "description": "Banyan cheque desk: writes, prints and logs cheques for small organisations, from one Mac.",
