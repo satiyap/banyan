@@ -459,7 +459,8 @@ func spool(pdf, printer string, wMM, hMM float64, title, output string) (int, er
 	if n := doc.pages(); n != 1 {
 		return 0, printError("the rendered PDF has " + strconv.Itoa(n) + " pages; a cheque must be exactly one")
 	}
-	if w, h, ok := doc.sizeMM(0); !ok || math.Abs(w-wMM) > 0.5 || math.Abs(h-hMM) > 0.5 {
+	pageW, pageH, ok := doc.sizeMM(0)
+	if !ok || math.Abs(pageW-wMM) > 0.5 || math.Abs(pageH-hMM) > 0.5 {
 		return 0, printError("the rendered PDF is not " + sixFigures(wMM) + " x " + sixFigures(hMM) + "mm — not safe to print")
 	}
 	page, err := doc.page(0)
@@ -492,12 +493,15 @@ func spool(pdf, printer string, wMM, hMM float64, title, output string) (int, er
 	if r, _, _ := procStartPage.Call(dc); int32(r) <= 0 {
 		return fail("the spooler would not start the page")
 	}
-	// The whole physical sheet, origin at its corner: the device context's
-	// origin is the printable area's corner, so it is stepped back by the
-	// driver's offset. Size is the sheet's own pixels, so 1mm stays 1mm.
+	// Origin at the sheet's corner: the device context's origin is the
+	// printable area's corner, so it is stepped back by the driver's offset.
+	// The page is drawn at its own size in the printer's pixels, never
+	// stretched to the sheet: Edge's page can be a tenth of a millimetre off
+	// 92 x 204, and 1mm on the page must stay 1mm on paper.
 	lib.renderPage.Call(dc, page,
 		uintptr(int64(-s.offsetX)), uintptr(int64(-s.offsetY)),
-		uintptr(s.physW), uintptr(s.physH), 0, fpdfAnnot|fpdfPrinting)
+		uintptr(int(math.Round(pageW/25.4*float64(s.dpiX)))), uintptr(int(math.Round(pageH/25.4*float64(s.dpiY)))),
+		0, fpdfAnnot|fpdfPrinting)
 	if r, _, _ := procEndPage.Call(dc); int32(r) <= 0 {
 		return fail("the spooler would not finish the page")
 	}
