@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Banyan: a cheque desk for Mac</title>
-<meta name="description" content="Banyan is a Mac app for small organisations that writes, prints and logs cheques onto bank-issued leaves, with reports for the year. Open source, Apache 2.0.">
+<title>Banyan: a cheque desk for Mac and Windows</title>
+<meta name="description" content="Banyan is a Mac and Windows app for small organisations that writes, prints and logs cheques onto bank-issued leaves, with reports for the year. Open source, Apache 2.0.">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="site.css">
 </head>
@@ -30,7 +30,7 @@
   <div class="container">
     <div>
       <h1>Cheques written, printed and logged.</h1>
-      <p class="lead">A Mac app for small organisations that leaves only the signature to do by hand.</p>
+      <p class="lead">A Mac and Windows app for small organisations that leaves only the signature to do by hand.</p>
       <div class="actions">
         <div class="get">
           <div class="get-row">
@@ -40,7 +40,7 @@
             </a>
             <a class="mas js-dl" href="https://apps.apple.com/app/id6837597005"><img src="assets/mac-app-store-badge.svg" width="144" height="48" alt="Download on the Mac App Store"></a>
           </div>
-          <p class="platform" id="platform" aria-live="polite">Needs a Mac with Apple silicon (M1 or later).</p>
+          <p class="platform" id="platform" aria-live="polite">Needs a Mac with Apple silicon (M1 or later). On Windows 10 or 11 (64-bit), <a href="https://github.com/satiyap/banyan/releases/latest/download/Banyan-windows-x64-setup.exe">download the Windows installer</a>.</p>
         </div>
         <a class="btn crop" href="https://github.com/satiyap/banyan"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>View the source</a>
       </div>
@@ -86,9 +86,9 @@
   <div class="container">
     <h2 class="head">A standalone desktop app.</h2>
     <dl class="set">
-      <div><dt>No server</dt><dd>Everything runs on one Mac, beside the printer.</dd></div>
+      <div><dt>No server</dt><dd>Everything runs on one computer, beside the printer.</dd></div>
       <div><dt>No account</dt><dd>Nothing to sign up for, and no password to keep.</dd></div>
-      <div><dt>Works offline</dt><dd>The register is one file on your Mac. Nothing is sent anywhere unless you connect a server.</dd></div>
+      <div><dt>Works offline</dt><dd>The register is one file on your computer. Nothing is sent anywhere unless you connect a server.</dd></div>
     </dl>
   </div>
 </section>
@@ -111,7 +111,7 @@
     </div>
     <dl class="set">
       <div><dt>Read-only for members</dt><dd>Each member signs in with a key you give them. They see reports, never the register, and can’t write a cheque.</dd></div>
-      <div><dt>Kept in step</dt><dd>The desk sends the register to the server after every change, so another Mac can pick up from it.</dd></div>
+      <div><dt>Kept in step</dt><dd>The desk sends the register to the server after every change, so another computer can pick up from it.</dd></div>
       <div><dt>Optional</dt><dd>Skip it and the desk works on its own. You can connect later in Settings.</dd></div>
     </dl>
   </div>
@@ -220,7 +220,7 @@
   <div class="container">
     <div>
       <h2 class="head">Read the code before you trust it with a cheque.</h2>
-      <p class="fine">For Apple silicon Macs. Signed with an Apple Developer ID and notarized by Apple. Free under Apache 2.0.</p>
+      <p class="fine">For Apple silicon Macs and for Windows 10 and 11 (64-bit). The Mac app is signed with an Apple Developer ID and notarized by Apple; the Windows installer is not yet code-signed. Free under Apache 2.0.</p>
     </div>
     <div class="actions">
       <a class="btn primary crop js-dl" href="https://github.com/satiyap/banyan/releases/latest/download/Banyan-mac-arm64.dmg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7 11 5 5 5-5"/><path d="M5 20h14"/></svg>Download for Mac</a>
@@ -246,7 +246,8 @@
 </footer>
 
 <script>
-/* Which computer is this? Only a Mac with Apple silicon can run Banyan.
+/* Which computer is this? Banyan runs on a Mac with Apple silicon, and on
+   Windows 10 and 11, which are offered the Windows installer instead.
    Chrome and Edge say so outright. Safari always calls a Mac "Intel", so the
    graphics chip is asked instead: Apple silicon reports an Apple GPU. Firefox
    may hide that, and then the page says nothing more than the requirement. */
@@ -265,7 +266,8 @@
     var mac = /Macintosh|Mac OS X/.test(ua) && !/iPhone|iPad/.test(ua) && !(navigator.maxTouchPoints > 1);
     if (!mac) {
       if (/iPhone|iPad|Android/.test(ua) || navigator.maxTouchPoints > 1) return Promise.resolve('mobile');
-      return Promise.resolve(/Windows|Linux|CrOS/.test(ua) ? 'other' : 'unknown');
+      if (/Windows NT/.test(ua)) return Promise.resolve('windows');
+      return Promise.resolve(/Linux|CrOS/.test(ua) ? 'other' : 'unknown');
     }
     if (uad && uad.getHighEntropyValues) {
       return uad.getHighEntropyValues(['architecture']).then(function (v) {
@@ -279,17 +281,32 @@
   }
   var note = document.getElementById('platform');
   var links = document.querySelectorAll('.js-dl');
+  var WINDOWS = 'https://github.com/satiyap/banyan/releases/latest/download/Banyan-windows-x64-setup.exe';
   var SAY = {
     apple: 'For your Mac with Apple silicon.',
-    intel: 'Not available for Intel Macs. Banyan needs a Mac with Apple silicon (M1 or later).',
-    other: 'Not available for this computer. Banyan is a Mac app for Apple silicon (M1 or later).',
-    mobile: 'Banyan runs on a Mac with Apple silicon (M1 or later). Open this page on your Mac to download it.'
+    intel: 'Not available for Intel Macs. Banyan needs a Mac with Apple silicon (M1 or later), or Windows 10 or 11.',
+    windows: 'For Windows 10 and 11 (64-bit). It is not code-signed, so Windows warns the first time: choose More info, then Run anyway.',
+    other: 'Not available for this computer. Banyan runs on a Mac with Apple silicon (M1 or later) or on Windows 10 and 11.',
+    mobile: 'Banyan runs on a Mac with Apple silicon (M1 or later) and on Windows 10 and 11. Open this page on your computer to download it.'
   };
   detect().then(function (kind) {
     if (!SAY[kind]) return;   // cannot tell: the button stays, with the requirement under it
     note.textContent = SAY[kind];
     if (kind === 'apple') return;
-    // Only an Apple silicon build exists, so anything else is not offered a download.
+    if (kind === 'windows') {
+      // The Windows installer in place of the Mac's downloads; no App Store badge.
+      for (var j = 0; j < links.length; j++) {
+        var a = links[j];
+        if (a.classList.contains('mas')) { a.hidden = true; continue; }
+        a.href = WINDOWS;
+        for (var k = 0; k < a.childNodes.length; k++) {
+          var t = a.childNodes[k];
+          if (t.nodeType === 3 && /Mac/.test(t.nodeValue)) t.nodeValue = t.nodeValue.replace('Mac', 'Windows');
+        }
+      }
+      return;
+    }
+    // Builds exist for Apple silicon Macs and Windows only, so anything else is not offered a download.
     for (var i = 0; i < links.length; i++) links[i].hidden = true;
     note.classList.add('is-unsupported');
   });
