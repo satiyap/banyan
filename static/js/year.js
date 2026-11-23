@@ -239,13 +239,13 @@ function ledgerPanel(d, colour) {
   const csvKind = { entities: 'entities', heads: 'categories' }[P.tab];
   const tabs = seg('Ledger', [['entities', 'Entities'], ['heads', 'Categories']], P.tab,
     v => { P.tab = v; const panel = $('.ledger'); panel.replaceWith(ledgerPanel(d, colour)); hydrateIcons($('.ledger')); });
-  const max = Math.max(1, ...d.entities.map(e => e.paise), ...d.categories.map(c => c.paise));
   const vs = (now, before) => {
     if (!before) return h('span.sub', now ? 'new' : '');
     const pct = Math.round((now - before) / before * 100);
     return h('span.sub' + (pct > 0 ? '.up' : pct < 0 ? '.down' : ''), `${pct > 0 ? '+' : ''}${pct}% vs ${d.totals.previous.label.split(' (')[0]}`);
   };
-  const bar = (p, c) => h('div.lbar', h('i', { style: { width: (p / max * 100) + '%', background: c } }));
+  // Each bar is its share of the period, beside the same percentage, so the rows add up to one full bar.
+  const bar = (share, c) => h('div.lbar', h('i', { style: { width: (share * 100) + '%', background: c } }));
   const L = P.leaves;
   const ctx = L ? yearCtx(d, colour) : null;
   let rows;
@@ -259,7 +259,7 @@ function ledgerPanel(d, colour) {
       const cells = name => [
         h('div', h('div.strong', name || e.entity_name, ent ? noteMark(ent.notes) : null), h('div.sub', sub)),
         h('div.sub', e.category), h('div.sub', plural(e.count, 'cheque')), h('div.mono', `${(e.share * 100).toFixed(1)}%`),
-        bar(e.paise, colour(e.category)), h('div.mono.num', rupees(e.paise, { whole: true })), vs(e.paise, e.previous_paise)];
+        bar(e.share, colour(e.category)), h('div.mono.num', rupees(e.paise, { whole: true })), vs(e.paise, e.previous_paise)];
       if (!ent) return h('div.lrow', cells());
       return drillRow('e' + ent.id, '', btn => { btn.textContent = e.entity_name; return cells(btn); }, () => [
         h('div.ann-drill-head',
@@ -273,7 +273,7 @@ function ledgerPanel(d, colour) {
       const cells = name => [
         h('div.strong', h('i.swatch', { style: { background: colour(c.category) } }), name || c.category),
         h('div.sub', plural(c.entity_count, 'entity', 'entities')), h('div.sub', plural(c.count, 'cheque')), h('div.mono', `${(c.share * 100).toFixed(1)}%`),
-        bar(c.paise, colour(c.category)), h('div.mono.num', rupees(c.paise, { whole: true })), vs(c.paise, c.previous_paise)];
+        bar(c.share, colour(c.category)), h('div.mono.num', rupees(c.paise, { whole: true })), vs(c.paise, c.previous_paise)];
       if (!L) return h('div.lrow', cells());
       return drillRow('h' + c.category, '', btn => { btn.textContent = c.category; return cells(btn); },
         () => leafDrill(L.leaves.filter(l => l.head === c.category), ctx), d, colour);

@@ -2,6 +2,10 @@
 
 What each release of the Banyan desktop app does. The full history is in the git log.
 
+## 2.6.2 — 2026-11-23
+
+- The Year report's bars show each entity's and category's share of the period, so together they make one full bar.
+
 ## 2.6.1 — 2026-11-23
 
 - The Print button turns on as soon as the printer comes back online, without leaving the Tray.
