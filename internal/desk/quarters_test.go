@@ -44,7 +44,7 @@ func TestQuarterlyIncomeAndBalance(t *testing.T) {
 		{2026, 2, 2_000_00, "2026-09-30", "logged"},
 		{2026, 2, 9_999_00, "2026-09-01", "void"},   // void: not spending
 		{2026, 3, 5_000_00, "2026-12-01", "printed"}, // post-dated into Q3: counted by its date
-		{2026, 4, 7_000_00, "2027-01-05", "printed"}, // a quarter yet to come: not shown
+		{2026, 4, 7_000_00, "2027-01-05", "printed"}, // a quarter yet to come: shown, as written so far
 	} {
 		if _, err := app.db.AddCheque(db.NewCheque{
 			db.F("payee", "Invented Vendor"), db.F("amount_paise", c.amt), db.F("amount_words", "x"),
@@ -72,16 +72,20 @@ func TestQuarterlyIncomeAndBalance(t *testing.T) {
 		t.Errorf("start: %v", got.value("start"))
 	}
 	qs := got.items("quarters")
-	if len(qs) != 2 {
-		t.Fatalf("quarters after the start up to now: %v", qs)
+	if len(qs) != 3 {
+		t.Fatalf("quarters after the start to the end of the year: %v", qs)
 	}
-	q2, q3 := qs[0].(obj), qs[1].(obj)
+	q2, q3, q4 := qs[0].(obj), qs[1].(obj), qs[2].(obj)
+	if q4.value("future") != true || q3.value("future") != false {
+		t.Errorf("future: %v %v", q3, q4)
+	}
 	want := func(o obj, key string, n float64) {
 		t.Helper()
 		if v, _ := o.value(key).(float64); v != n {
 			t.Errorf("%s %s = %v, want %v", o.text("label"), key, o.value(key), n)
 		}
 	}
+	want(q4, "register_paise", 700_000)
 	// Q2: 30,000.50 in; 12,000 written in the register plus 3,000 outside it.
 	want(q2, "income_paise", 3_000_050)
 	want(q2, "register_paise", 1_200_000)
@@ -109,7 +113,7 @@ func TestQuarterlyIncomeAndBalance(t *testing.T) {
 		t.Fatalf("new start: %d %s", code, body)
 	}
 	moved := read()
-	if moved.object("start").text("label") != "Q2 FY 2026–27" || len(moved.items("quarters")) != 1 {
+	if moved.object("start").text("label") != "Q2 FY 2026–27" || len(moved.items("quarters")) != 2 {
 		t.Errorf("after moving the start: %v", moved)
 	}
 	rows, err := db.QuartersOf(app.db).List()

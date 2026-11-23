@@ -623,19 +623,36 @@ textarea.paste { font-family: var(--data); font-size: 13px; margin-top: 10px; fo
            font-size: 13px; min-width: 180px; pointer-events: none; z-index: 5; }
 .tip-row { display: grid; grid-template-columns: 10px 1fr auto; gap: 6px; align-items: center; }
 .tip-row i { width: 10px; height: 10px; border-radius: 1px; }
-/* Income and spending by quarter: two bars a quarter on one scale, the table beneath. */
+/* Income and expense: income against expense each quarter, then the surplus or deficit since the start. Projected is outlined and dashed. */
 .income-panel { position: relative; }
-.igroups { display: flex; gap: var(--space-md); align-items: stretch; height: 200px; overflow-x: auto; padding-bottom: var(--space-2xs); }
-.igroup { display: flex; flex-direction: column; align-items: center; gap: var(--space-2xs); min-width: 84px; flex: 1; max-width: 140px; border-radius: var(--r); padding: var(--space-2xs) var(--space-2xs) 0; }
-.igroup:hover { background: var(--bench); }
-.igroup.is-current .mlabel { color: var(--amber-ink); }
-.ipair { flex: 1; width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; min-height: 0; }
-.ibar { display: flex; flex-direction: column; align-items: center; min-height: 0; }
-.ifill { display: block; width: 70%; max-width: 30px; border-radius: 4px 4px 0 0; min-height: 0; }
+.income-headline { margin: 0 0 var(--space-sm); font-size: 15px; color: var(--ink-2); }
+.income-headline .strong { color: var(--ink); }
+.ic-wrap { position: relative; }
+.ic-caption { font-size: 13px; color: var(--ink-3); margin: var(--space-xs) 0 0; }
+.ic-chart { display: block; width: 100%; height: auto; overflow: visible; }
+.ic-grid { stroke: var(--rule-soft); stroke-width: 1; }
+.ic-zero { stroke: var(--ink-3); stroke-width: 1; }
+.ic-tick { font: 400 11px var(--body); fill: var(--ink-3); }
+.ic-val { font: 400 11px var(--body); fill: var(--ink-2); font-variant-numeric: tabular-nums; }
+.ic-val.is-over { fill: var(--stamp); }
+.ic-label { font: 500 12px var(--body); fill: var(--ink-2); }
+.ic-label.is-now { fill: var(--amber-ink); }
+.ic-line { stroke: var(--ink); stroke-width: 2; stroke-linejoin: round; }
+.ic-line.is-projected { stroke-dasharray: 5 4; stroke: var(--ink-3); }
+.ic-dot { fill: var(--ink); stroke: var(--panel); stroke-width: 2; }
+.ic-dot.is-over { fill: var(--stamp); }
+.ic-dot.is-projected { fill: var(--panel); stroke: var(--ink-3); stroke-width: 1.5; }
+.ic-dot.is-projected.is-over { stroke: var(--stamp); }
+.ic-hits { position: absolute; inset: 0; pointer-events: none; }
+.ic-hit { position: absolute; top: 0; bottom: 0; pointer-events: auto; border-radius: var(--r); }
+.ic-hit:hover { background: color-mix(in oklch, var(--ink) 4%, transparent); }
 .income-legend { display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-md); margin: var(--space-sm) 0; }
 .income-legend li { grid-template-columns: 12px auto; }
+.income-legend .is-projected-swatch { box-sizing: border-box; border: 1.5px dashed var(--ink-3); background: none; }
 .income-table tr.is-start td { color: var(--ink-3); }
 .income-table tr.is-current td { background: var(--amber-w); }
+.income-table tr.is-future td { color: var(--ink-2); }
+.income-table td.is-projected { font-style: italic; }
 .income-table td.is-over { color: var(--stamp); }
 .lrows { display: grid; }
 .lrow { display: grid; grid-template-columns: minmax(180px, 1.6fr) 1fr 90px 60px minmax(100px, 1.4fr) 110px 120px; gap: var(--space-sm); align-items: center; padding: 10px var(--space-2xs); border-top: 1px solid var(--rule-soft); color: inherit; text-decoration: none; }

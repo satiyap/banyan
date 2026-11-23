@@ -81,6 +81,7 @@ type quarterOut struct {
 	Quarter       int64  `json:"quarter"`
 	Label         string `json:"label"`
 	Current       bool   `json:"current"`
+	Future        bool   `json:"future"`
 	Entered       bool   `json:"entered"`
 	IncomePaise   int64  `json:"income_paise"`
 	RegisterPaise int64  `json:"register_paise"`
@@ -97,8 +98,10 @@ type quarterStartOut struct {
 	ClosingPaise int64  `json:"closing_paise"`
 }
 
-// quarters is every quarter from the one after the starting point up to the
-// current one, with its income, spending and the balance it closed on.
+// quarters is every quarter from the one after the starting point to the end
+// of the current financial year, with its income, spending and the balance
+// it closed on. Quarters still to come carry only cheques already written
+// for them (post-dated); the page projects the rest.
 func (a *App) quarters(rq *req) (*response, error) {
 	if err := rq.check(); err != nil {
 		return nil, err
@@ -126,7 +129,8 @@ func (a *App) quarters(rq *req) (*response, error) {
 		from := quarterKey{start.Fy, start.Quarter}
 		startOut = quarterStartOut{from.fy, from.quarter, from.label(), *start.ClosingPaise}
 		balance := *start.ClosingPaise
-		for k := from.next(); !k.after(now); k = k.next() {
+		last := quarterKey{now.fy, 4}
+		for k := from.next(); !k.after(last); k = k.next() {
 			q := int(k.quarter)
 			first, last, err := reports.PeriodBounds(int(k.fy), &q)
 			if err != nil {
@@ -140,7 +144,7 @@ func (a *App) quarters(rq *req) (*response, error) {
 			spent := written + r.OutsidePaise
 			balance += r.IncomePaise - spent
 			out = append(out, quarterOut{
-				Fy: k.fy, Quarter: k.quarter, Label: k.label(), Current: k == now, Entered: entered,
+				Fy: k.fy, Quarter: k.quarter, Label: k.label(), Current: k == now, Future: k.after(now), Entered: entered,
 				IncomePaise: r.IncomePaise, RegisterPaise: written, OutsidePaise: r.OutsidePaise,
 				SpentPaise: spent, NetPaise: r.IncomePaise - spent, ClosingPaise: balance,
 			})
