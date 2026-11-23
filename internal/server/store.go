@@ -197,6 +197,12 @@ type Store struct {
 }
 
 func sqliteURI(path string, query string) string {
+	// A Windows path (C:\...) goes as file:///C:/...: SQLite reads a drive
+	// letter only after a slash.
+	path = filepath.ToSlash(path)
+	if len(path) >= 2 && path[1] == ':' {
+		path = "/" + path
+	}
 	u := url.URL{Scheme: "file", Path: path, RawQuery: query}
 	return u.String()
 }

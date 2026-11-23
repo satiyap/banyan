@@ -414,6 +414,8 @@ func replay(t *testing.T, session obj) (replayed int, failures []string) {
 	}
 	version := deskVersionOf(t, app)
 	subs := []sub{
+		// A recorded path is "{PDF_DIR}/name.pdf"; on Windows the desk joins it with a backslash.
+		{from: "{PDF_DIR}/", to: cfg.PDFDir + string(filepath.Separator)},
 		{from: "{PDF_DIR}", to: cfg.PDFDir},
 		{from: "{DESK_VERSION}", to: version},
 		{from: recordedRefusal, to: switchedOff},

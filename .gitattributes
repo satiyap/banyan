@@ -1,0 +1,4 @@
+# Every text file is checked out with LF line endings, Windows included: the
+# desk's pages are pinned by sha256 (tests/golden/http.json), and the Windows
+# app must embed the same bytes as the Mac's.
+* text=auto eol=lf

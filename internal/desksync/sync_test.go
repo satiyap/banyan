@@ -16,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -309,7 +310,11 @@ func payees(t *testing.T, path string) []string {
 func newDesk(t *testing.T) *desk {
 	t.Helper()
 	// A folder name with characters a careless SQLite URI would trip on.
-	dir := filepath.Join(t.TempDir(), "desk #1 ?50%")
+	name := "desk #1 ?50%"
+	if runtime.GOOS == "windows" {
+		name = "desk #1 50%" // Windows allows no '?' in a file name
+	}
+	dir := filepath.Join(t.TempDir(), name)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}

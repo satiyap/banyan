@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -185,6 +186,9 @@ func TestAnAppThatCannotReplaceItselfSaysWhy(t *testing.T) {
 }
 
 func TestBundleOf(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Mac app bundles only")
+	}
 	if got := BundleOf("/Applications/Banyan.app/Contents/MacOS/Banyan"); got != "/Applications/Banyan.app" {
 		t.Errorf("%q", got)
 	}

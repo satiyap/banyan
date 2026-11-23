@@ -2,6 +2,7 @@ package render
 
 import (
 	"encoding/json"
+	"math"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -84,7 +85,15 @@ func TestChequeIsOneExactPage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Pages != 1 || result.AsDict().PageWMM != 92 || result.AsDict().PageHMM != 204 {
+	// WebKit (the Mac) gives the page exactly. Chromium's (Edge, on Windows)
+	// is 92.12 x 203.88, as the recordings made with Chrome show; the app's
+	// own check allows PageToleranceMM.
+	w, h := result.AsDict().PageWMM, result.AsDict().PageHMM
+	exact := w == 92 && h == 204
+	if runtime.GOOS == "windows" {
+		exact = math.Abs(w-92) <= PageToleranceMM && math.Abs(h-204) <= PageToleranceMM
+	}
+	if result.Pages != 1 || !exact {
 		t.Fatalf("got %+v", result.AsDict())
 	}
 	if keep := os.Getenv("BANYAN_KEEP_RENDER"); keep != "" {

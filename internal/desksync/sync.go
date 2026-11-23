@@ -150,9 +150,17 @@ func Snapshot(dbPath string) ([]byte, error) {
 }
 
 // sqliteURI names a file so that no character in its path is read as part of a query.
+// A Windows path (C:\Users\...) goes as file:/C:/Users/...: SQLite reads a
+// drive letter only from a path that starts with a slash, and only unescaped.
 func sqliteURI(path string) string {
 	var b strings.Builder
 	b.WriteString("file:")
+	path = filepath.ToSlash(path)
+	if len(path) >= 2 && path[1] == ':' {
+		b.WriteString("/")
+		b.WriteString(path[:2])
+		path = path[2:]
+	}
 	for i := 0; i < len(path); i++ {
 		c := path[i]
 		switch {
