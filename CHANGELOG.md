@@ -2,6 +2,10 @@
 
 What each release of the Banyan desktop app does. The full history is in the git log.
 
+## 2.6.5 — 2026-11-25
+
+- Tray: row cells line up with the entity box again.
+
 ## 2.6.4 — 2026-11-23
 
 - Year: income vs expense chart, with a projection to year end.

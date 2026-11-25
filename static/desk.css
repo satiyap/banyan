@@ -461,6 +461,12 @@ dialog.palette .modal-actions { display: none; }
             padding: var(--space-xs) var(--space-sm); border-top: 1px solid var(--rule-soft); }
 .grid-row.is-current { background: var(--sel-w); }
 .grid-head { border-top: 0; font: 500 13px var(--body); color: var(--ink-3); }
+/* The entity cell carries a "pays …" line beneath its input, so centring the
+   row would drop every other cell below the inputs. Rows line up on the 32px
+   input line instead; the plain cells take that height and centre within it. */
+.grid-row[data-i] { align-items: start; }
+.grid-row[data-i] > .cell-n, .grid-row[data-i] > .cell-ac, .grid-row[data-i] > .cell-check,
+.grid-row[data-i] > .cell-datewrap, .grid-row[data-i] > :nth-child(8) { min-height: 32px; display: flex; align-items: center; }
 .grid-row input[type=text], .grid-row input[type=date] { width: 100%; height: 32px; }
 .cell-n { color: var(--ink-3); font-size: 13px; font-variant-numeric: tabular-nums; }
 .ent-input { position: relative; }
